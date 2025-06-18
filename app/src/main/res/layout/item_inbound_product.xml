@@ -7,15 +7,49 @@
     android:background="@drawable/edit_text_border"
     android:layout_marginBottom="8dp">
 
-    <!-- 左侧：商品图片 -->
-    <ImageView
-        android:id="@+id/imgProduct"
-        android:layout_width="80dp"
-        android:layout_height="80dp"
-        android:layout_marginEnd="12dp"
-        android:scaleType="centerCrop"
-        android:background="#F0F0F0"
-        android:contentDescription="商品图片" />
+    <!-- 左侧：商品图片区域 -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginEnd="12dp">
+
+        <!-- 商品图片 -->
+        <ImageView
+            android:id="@+id/imgProduct"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:scaleType="centerCrop"
+            android:background="#F0F0F0"
+            android:contentDescription="商品图片" />
+
+        <!-- 图片下方的框 -->
+        <EditText
+            android:id="@+id/editImageNote"
+            android:layout_width="80dp"
+            android:layout_height="32dp"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/edit_text_border"
+            android:hint="备注"
+            android:textSize="12sp"
+            android:padding="6dp"
+            android:gravity="center"
+            android:maxLines="1" />
+
+        <!-- 备注2框 -->
+        <EditText
+            android:id="@+id/editImageNote2"
+            android:layout_width="80dp"
+            android:layout_height="32dp"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/edit_text_border"
+            android:hint="备注2"
+            android:textSize="12sp"
+            android:padding="6dp"
+            android:gravity="center"
+            android:maxLines="1" />
+
+    </LinearLayout>
 
     <!-- 右侧：商品信息（三排） -->
     <LinearLayout

@@ -17,8 +17,8 @@
         android:layout_height="60dp"
         android:layout_marginEnd="12dp"
         android:background="#f0f0f0"
-        android:scaleType="centerCrop"
-        android:src="@drawable/ic_launcher_foreground" />
+        android:scaleType="centerInside"
+        android:contentDescription="商品图片" />
 
     <!-- 商品信息 -->
     <LinearLayout
