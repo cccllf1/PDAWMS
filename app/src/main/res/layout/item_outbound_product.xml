@@ -23,46 +23,19 @@
             android:background="#F0F0F0"
             android:contentDescription="商品图片" />
 
-        <!-- 库存显示 -->
-        <TextView
-            android:id="@+id/txtImageStock"
-            android:layout_width="80dp"
-            android:layout_height="32dp"
-            android:layout_marginTop="4dp"
-            android:background="@drawable/edit_text_border"
-            android:text="库存: 0"
-            android:textSize="12sp"
-            android:padding="6dp"
-            android:gravity="center"
-            android:textColor="#666666" />
-
-        <!-- SKU最大可用数量显示 -->
+        <!-- 库存和货位信息显示 -->
         <TextView
             android:id="@+id/txtSkuMaxStock"
             android:layout_width="80dp"
-            android:layout_height="32dp"
+            android:layout_height="48dp"
             android:layout_marginTop="4dp"
             android:background="@drawable/edit_text_border"
-            android:text="总库存: 0"
+            android:text="库存：0件\n货位：0个"
             android:textSize="11sp"
             android:padding="4dp"
             android:gravity="center"
             android:textColor="#FF6B35"
             android:textStyle="bold"
-            android:maxLines="2" />
-
-        <!-- 显示有几个货位有库存 -->
-        <TextView
-            android:id="@+id/txtLocationCount"
-            android:layout_width="80dp"
-            android:layout_height="32dp"
-            android:layout_marginTop="4dp"
-            android:background="@drawable/edit_text_border"
-            android:text="0个货位"
-            android:textSize="11sp"
-            android:padding="4dp"
-            android:gravity="center"
-            android:textColor="#666666"
             android:maxLines="2" />
 
     </LinearLayout>

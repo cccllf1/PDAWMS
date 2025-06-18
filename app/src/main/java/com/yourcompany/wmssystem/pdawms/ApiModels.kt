@@ -119,13 +119,13 @@ data class InboundRequest(
 // 出库请求
 data class OutboundRequest(
     @SerializedName("product_id") val product_id: String?,
-    @SerializedName("product_code") val product_code: String?,
-    @SerializedName("location_id") val location_id: String?,
     @SerializedName("location_code") val location_code: String?,
     @SerializedName("sku_code") val sku_code: String?,
-    @SerializedName("stock_quantity") val stock_quantity: Int,
+    @SerializedName("sku_color") val sku_color: String?,
+    @SerializedName("sku_size") val sku_size: String?,
+    @SerializedName("quantity") val quantity: Int,
     @SerializedName("batch_number") val batch_number: String?,
-    @SerializedName("operator_id") val operator_id: String,
+    @SerializedName("operator_id") val operator_id: String?,
     @SerializedName("is_urgent") val is_urgent: Boolean?,
     @SerializedName("notes") val notes: String?
 )

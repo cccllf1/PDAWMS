@@ -58,7 +58,6 @@ class OutboundListAdapter(
     
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val imgProduct: ImageView = view.findViewById(R.id.imgProduct)
-        val txtImageStock: TextView = view.findViewById(R.id.txtImageStock)
         val txtProductCode: TextView = view.findViewById(R.id.txtProductCode)
         val spinnerColor: Spinner = view.findViewById(R.id.spinnerColor)
         val spinnerSize: Spinner = view.findViewById(R.id.spinnerSize)
@@ -68,7 +67,6 @@ class OutboundListAdapter(
         val txtMaxStock: TextView = view.findViewById(R.id.txtMaxStock)
         val btnDelete: Button = view.findViewById(R.id.btnDelete)
         val txtSkuMaxStock: TextView = view.findViewById(R.id.txtSkuMaxStock)
-        val txtLocationCount: TextView = view.findViewById(R.id.txtLocationCount)
     }
 
     override fun getItemCount(): Int = items.size
@@ -83,29 +81,14 @@ class OutboundListAdapter(
         val item = items[position]
         
         // 设置商品信息
-        holder.txtProductCode.text = "${item.sku} - ${item.productName}"
-        holder.txtImageStock.text = "库存: ${item.maxStock}"
+        holder.txtProductCode.text = "SKU: ${item.sku}"
         holder.txtCurrentStock.text = "${item.maxStock}"
-        holder.txtMaxStock.text = "(最大: ${item.maxStock})"
+        holder.txtMaxStock.text = ""
         
-        // 显示SKU总可用库存
+        // 显示库存和货位信息
         val totalAvailableStock = item.locationStocks.values.sum()
-        val locationCount = item.locationStocks.size
-        holder.txtSkuMaxStock.text = if (locationCount > 1) {
-            "总库存: ${totalAvailableStock}件\n(${locationCount}个库位)"
-        } else {
-            "总库存: ${totalAvailableStock}件"
-        }
-        
-        // 显示有几个货位有库存
         val stockLocationCount = item.locationStocks.filter { it.value > 0 }.size
-        holder.txtLocationCount.text = if (stockLocationCount > 1) {
-            "${stockLocationCount}个货位\n有库存"
-        } else if (stockLocationCount == 1) {
-            "1个货位\n有库存"
-        } else {
-            "无库存"
-        }
+        holder.txtSkuMaxStock.text = "库存：${totalAvailableStock}件\n货位：${stockLocationCount}个"
         
         // 设置图片
         if (item.imageUrl.isNotEmpty()) {
@@ -310,27 +293,13 @@ class OutboundListAdapter(
                             onItemUpdate(holder.adapterPosition, updatedItem)
                             
                             // 更新显示信息
-                            holder.txtProductCode.text = "${updatedItem.sku} - ${updatedItem.productName}"
+                            holder.txtProductCode.text = "SKU: ${updatedItem.sku}"
                             val totalStock = updatedItem.locationStocks.values.sum()
-                            val locationCount = updatedItem.locationStocks.size
-                            holder.txtSkuMaxStock.text = if (locationCount > 1) {
-                                "总库存: ${totalStock}件\n(${locationCount}个库位)"
-                            } else {
-                                "总库存: ${totalStock}件"
-                            }
-                            
                             val stockLocationCount = updatedItem.locationStocks.filter { it.value > 0 }.size
-                            holder.txtLocationCount.text = if (stockLocationCount > 1) {
-                                "${stockLocationCount}个货位\n有库存"
-                            } else if (stockLocationCount == 1) {
-                                "1个货位\n有库存"
-                            } else {
-                                "无库存"
-                            }
+                            holder.txtSkuMaxStock.text = "库存：${totalStock}件\n货位：${stockLocationCount}个"
                             
-                            holder.txtImageStock.text = "库存: ${updatedItem.maxStock}"
-                            holder.txtCurrentStock.text = "$updatedItem.maxStock"
-                            holder.txtMaxStock.text = "(最大: $updatedItem.maxStock)"
+                            holder.txtCurrentStock.text = "${updatedItem.maxStock}"
+                            holder.txtMaxStock.text = ""
                             holder.editQuantity.setText(updatedItem.quantity.toString())
                             
                             // 更新库位选择器
@@ -380,9 +349,12 @@ class OutboundListAdapter(
                         onItemUpdate(holder.adapterPosition, updatedItem)
                         
                         // 更新显示
-                        holder.txtImageStock.text = "库存: $selectedStock"
+                        val totalStock = updatedItem.locationStocks.values.sum()
+                        val stockLocationCount = updatedItem.locationStocks.filter { it.value > 0 }.size
+                        holder.txtSkuMaxStock.text = "库存：${totalStock}件\n货位：${stockLocationCount}个"
+                        
                         holder.txtCurrentStock.text = "$selectedStock"
-                        holder.txtMaxStock.text = "(最大: $selectedStock)"
+                        holder.txtMaxStock.text = ""
                         holder.editQuantity.setText(updatedItem.quantity.toString())
                     }
                 }
@@ -1166,8 +1138,12 @@ class OutboundActivity : AppCompatActivity() {
     
     private fun updateOutboundItem(position: Int, item: OutboundItem) {
         if (position >= 0 && position < outboundItems.size) {
+            val oldItem = outboundItems[position]
+            // 只在真正有变化时才输出日志
+            if (oldItem.quantity != item.quantity || oldItem.location != item.location) {
+                Log.d("WMS_OUTBOUND", "📝 更新出库项[$position]: ${item.sku} -> 数量:${oldItem.quantity}→${item.quantity}, 库位:${item.location}")
+            }
             outboundItems[position] = item
-            Log.d("WMS_OUTBOUND", "📝 更新出库项[$position]: ${item.sku} -> 数量:${item.quantity}, 库位:${item.location}, 库存:${item.maxStock}")
         }
     }
     
@@ -1213,17 +1189,26 @@ class OutboundActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val requests = outboundItems.map { item ->
+                    // 检查登录状态并获取用户ID
+                    var userId = ApiClient.getCurrentUserId()
+                    if (userId.isNullOrEmpty()) {
+                        userId = "wms_user"  // 使用默认用户ID
+                        Log.d("WMS_OUTBOUND", "使用默认用户ID: $userId")
+                    }
+                    
+                    Log.d("WMS_OUTBOUND", "🔧 构建出库请求: ${item.sku} -> location: ${item.location}, quantity: ${item.quantity}, color: ${item.color}, size: ${item.size}")
+                    
                     OutboundRequest(
-                        product_code = item.sku,
+                        product_id = item.productId,
                         location_code = item.location,
-                        stock_quantity = item.quantity,
-                        sku_code = if (item.sku.contains("-")) item.sku else null,
-                        batch_number = item.batch.ifEmpty { null },
-                        notes = "PDA出库操作",
-                        operator_id = ApiClient.getCurrentUserId() ?: "",
-                        product_id = null,
-                        location_id = null,
-                        is_urgent = null
+                        sku_code = item.sku,
+                        sku_color = item.color,
+                        sku_size = item.size,
+                        quantity = item.quantity,
+                        batch_number = if (item.batch.isNotEmpty()) item.batch else null,
+                        operator_id = userId,
+                        is_urgent = false,
+                        notes = "PDA出库操作"
                     )
                 }
                 
@@ -1237,18 +1222,18 @@ class OutboundActivity : AppCompatActivity() {
                             val apiResponse = response.body()
                             if (apiResponse?.success == true) {
                                 successCount++
-                                Log.d("WMS_OUTBOUND", "✅ 出库成功: ${request.product_code}")
+                                Log.d("WMS_OUTBOUND", "✅ 出库成功: ${request.sku_code}")
                             } else {
                                 failCount++
-                                Log.w("WMS_OUTBOUND", "⚠️ 出库失败: ${request.product_code} - ${apiResponse?.error_message}")
+                                Log.w("WMS_OUTBOUND", "⚠️ 出库失败: ${request.sku_code} - ${apiResponse?.error_message}")
                             }
                         } else {
                             failCount++
-                            Log.w("WMS_OUTBOUND", "⚠️ 出库API调用失败: ${request.product_code} - ${response.code()}")
+                            Log.w("WMS_OUTBOUND", "⚠️ 出库API调用失败: ${request.sku_code} - ${response.code()}")
                         }
                     } catch (e: Exception) {
                         failCount++
-                        Log.e("WMS_OUTBOUND", "❌ 出库异常: ${request.product_code} - ${e.message}")
+                        Log.e("WMS_OUTBOUND", "❌ 出库异常: ${request.sku_code} - ${e.message}")
                     }
                 }
                 
