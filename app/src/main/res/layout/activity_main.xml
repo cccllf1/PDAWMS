@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#f5f5f5"
+    android:fillViewport="true"
+    android:scrollbars="none">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- 应用标题 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:background="#ffffff"
+            android:elevation="3dp"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:gravity="center">
+
+            <TextView
+                android:id="@+id/txtTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📦 PDA-WMS仓库管理"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="#2C3E50"
+                android:gravity="center" />
+
+            <TextView
+                android:id="@+id/txtSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="专业级仓储管理系统"
+                android:textSize="11sp"
+                android:textColor="#7F8C8D"
+                android:layout_marginTop="2dp"
+                android:gravity="center" />
+
+        </LinearLayout>
+
+        <!-- 功能模块网格 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- 第一排：入库 + 出库 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnInboundModule"
+                    android:layout_width="0dp"
+                    android:layout_height="70dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:text="📥\n入库"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:background="#E67E22"
+                    android:textColor="#ffffff"
+                    android:elevation="2dp" />
+
+                <Button
+                    android:id="@+id/btnOutboundModule"
+                    android:layout_width="0dp"
+                    android:layout_height="70dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:text="📤\n出库"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:background="#E74C3C"
+                    android:textColor="#ffffff"
+                    android:elevation="2dp" />
+
+            </LinearLayout>
+
+            <!-- 第二排：库存管理 + 库位管理 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnInventoryModule"
+                    android:layout_width="0dp"
+                    android:layout_height="70dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:text="📋\n库存管理"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:background="#27AE60"
+                    android:textColor="#ffffff"
+                    android:elevation="2dp" />
+
+                <Button
+                    android:id="@+id/btnLocationModule"
+                    android:layout_width="0dp"
+                    android:layout_height="70dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:text="📍\n库位管理"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:background="#9B59B6"
+                    android:textColor="#ffffff"
+                    android:elevation="2dp" />
+
+            </LinearLayout>
+
+            <!-- 第三排：扫码功能 + 报表统计 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnScanModule"
+                    android:layout_width="0dp"
+                    android:layout_height="70dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:text="📱\n扫码功能"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:background="#3498DB"
+                    android:textColor="#ffffff"
+                    android:elevation="2dp" />
+
+                <Button
+                    android:id="@+id/btnReportModule"
+                    android:layout_width="0dp"
+                    android:layout_height="70dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:text="📊\n报表统计"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:background="#16A085"
+                    android:textColor="#ffffff"
+                    android:elevation="2dp" />
+
+            </LinearLayout>
+
+            <!-- 退出登录按钮 -->
+            <Button
+                android:id="@+id/btnLogout"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="12dp"
+                android:text="🚪 退出登录"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:background="#95A5A6"
+                android:textColor="#ffffff"
+                android:elevation="2dp" />
+
+        </LinearLayout>
+
+        <!-- 系统状态信息 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="#ffffff"
+            android:elevation="2dp"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="💡 功能说明"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="#2C3E50"
+                android:layout_marginBottom="6dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="第一排：📥 入库  📤 出库\n第二排：📋 库存管理  📍 库位管理\n第三排：📱 扫码功能  📊 报表统计"
+                android:textSize="11sp"
+                android:textColor="#7F8C8D"
+                android:lineSpacingExtra="2dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView> 

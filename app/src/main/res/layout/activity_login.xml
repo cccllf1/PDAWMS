@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="32dp"
+    android:gravity="center">
+
+    <!-- 标题 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🏭 WMS仓储管理系统"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/black"
+        android:layout_marginBottom="48dp" />
+
+    <!-- 服务器配置区域 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="服务器配置"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/black"
+        android:layout_marginBottom="8dp" />
+
+    <!-- 服务器地址输入 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+        
+        <EditText
+            android:id="@+id/editServerUrl"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:hint="⚠️ 必须输入服务器地址 (如: 192.168.11.252:11)"
+            android:inputType="textUri"
+            android:padding="12dp"
+            android:textSize="14sp"
+            android:layout_marginEnd="8dp" />
+            
+        <Button
+            android:id="@+id/btnSetServer"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:text="设置"
+            android:textSize="14sp"
+            android:textColor="@android:color/white"
+            android:minWidth="60dp"
+            android:layout_marginEnd="4dp" />
+            
+        <Button
+            android:id="@+id/btnClearServer"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:text="清除"
+            android:textSize="14sp"
+            android:textColor="@android:color/white"
+            android:background="#95A5A6"
+            android:minWidth="60dp" />
+    </LinearLayout>
+
+    <!-- 登录区域 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="用户登录"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/black"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- 用户名输入 -->
+    <EditText
+        android:id="@+id/editUsername"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:hint="用户名"
+        android:inputType="text"
+        android:padding="12dp"
+        android:layout_marginBottom="16dp"
+        android:textSize="16sp"
+        android:text="wms" />
+
+    <!-- 密码输入 -->
+    <EditText
+        android:id="@+id/editPassword"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:hint="密码"
+        android:inputType="textPassword"
+        android:padding="12dp"
+        android:layout_marginBottom="32dp"
+        android:textSize="16sp"
+        android:text="123456" />
+
+    <!-- 登录按钮 -->
+    <Button
+        android:id="@+id/btnLogin"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="登录"
+        android:textSize="18sp"
+        android:textColor="@android:color/white"
+        android:layout_marginBottom="16dp" />
+
+    <!-- 版本信息 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Version 4.2 - 兼容版"
+        android:textSize="12sp"
+        android:textColor="@android:color/darker_gray"
+        android:layout_marginTop="16dp" />
+
+</LinearLayout> 

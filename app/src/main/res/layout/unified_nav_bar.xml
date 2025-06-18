@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#FFFFFF"
+    android:elevation="4dp">
+
+    <!-- 顶部导航栏容器 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:background="#FFFFFF"
+        android:gravity="center_vertical"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp">
+
+        <!-- 页面标题 -->
+        <TextView
+            android:id="@+id/tvNavTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="库存管理"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#333333"
+            android:gravity="left|center_vertical" />
+
+        <!-- Tab按钮区域 -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <!-- 库存按钮 -->
+            <Button
+                android:id="@+id/btnNavInventory"
+                android:layout_width="48dp"
+                android:layout_height="32dp"
+                android:layout_marginRight="4dp"
+                android:background="@drawable/nav_button_selector"
+                android:text="库存"
+                android:textSize="11sp"
+                android:textColor="@color/nav_button_text_selector"
+                style="?android:attr/borderlessButtonStyle" />
+
+            <!-- 入库按钮 -->
+            <Button
+                android:id="@+id/btnNavInbound"
+                android:layout_width="48dp"
+                android:layout_height="32dp"
+                android:layout_marginRight="4dp"
+                android:background="@drawable/nav_button_selector"
+                android:text="入库"
+                android:textSize="11sp"
+                android:textColor="@color/nav_button_text_selector"
+                style="?android:attr/borderlessButtonStyle" />
+
+            <!-- 出库按钮 -->
+            <Button
+                android:id="@+id/btnNavOutbound"
+                android:layout_width="48dp"
+                android:layout_height="32dp"
+                android:layout_marginRight="4dp"
+                android:background="@drawable/nav_button_selector"
+                android:text="出库"
+                android:textSize="11sp"
+                android:textColor="@color/nav_button_text_selector"
+                style="?android:attr/borderlessButtonStyle" />
+
+            <!-- 扫码按钮 -->
+            <Button
+                android:id="@+id/btnNavScan"
+                android:layout_width="48dp"
+                android:layout_height="32dp"
+                android:background="@drawable/nav_button_selector"
+                android:text="扫码"
+                android:textSize="11sp"
+                android:textColor="@color/nav_button_text_selector"
+                style="?android:attr/borderlessButtonStyle" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- 分隔线 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E0E0E0" />
+
+</LinearLayout> 

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    android:background="#ffffff"
+    android:elevation="2dp"
+    android:orientation="horizontal"
+    android:padding="16dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <!-- 商品图片 -->
+    <ImageView
+        android:id="@+id/imgProduct"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginEnd="12dp"
+        android:background="#f0f0f0"
+        android:scaleType="centerCrop"
+        android:src="@drawable/ic_launcher_foreground" />
+
+    <!-- 商品信息 -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <!-- 商品编码 -->
+        <TextView
+            android:id="@+id/txtProductCode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="129092"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#333"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <!-- 商品名称 -->
+        <TextView
+            android:id="@+id/txtProductName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="时尚T恤衫"
+            android:textSize="14sp"
+            android:textColor="#666"
+            android:layout_marginTop="4dp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <!-- 统计信息 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <TextView
+                android:id="@+id/txtTotalQuantity"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="总库存: 321"
+                android:textSize="12sp"
+                android:textColor="#2196F3"
+                android:background="#E3F2FD"
+                android:padding="4dp"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/txtLocationCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="7个库位"
+                android:textSize="12sp"
+                android:textColor="#4CAF50"
+                android:background="#E8F5E8"
+                android:padding="4dp"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/txtColorCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="6种颜色"
+                android:textSize="12sp"
+                android:textColor="#FF9800"
+                android:background="#FFF3E0"
+                android:padding="4dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- 隐藏的RecyclerView用于颜色展示 (可扩展功能) -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerColors"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
+
+</LinearLayout> 

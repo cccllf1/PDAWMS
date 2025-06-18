@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#f5f5f5">
+
+    <!-- 统一导航栏容器 -->
+    <LinearLayout
+        android:id="@+id/navBarContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+
+    <!-- 页面内容区域 -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+        <!-- SKU输入区域 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@android:color/white"
+            android:padding="16dp"
+            android:layout_marginTop="16dp"
+            android:elevation="2dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="📦 SKU编码"
+                android:textSize="16sp"
+                android:textColor="#333333"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <EditText
+                    android:id="@+id/editSku"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:hint="SKU编码 (如: PROD001-RED-L)"
+                    android:textSize="14sp"
+                    android:padding="12dp"
+                    android:background="#f8f9fa"
+                    android:layout_marginEnd="8dp"
+                    android:inputType="text" />
+
+                <Button
+                    android:id="@+id/btnScanSku"
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:text="📱 扫SKU"
+                    android:textSize="12sp"
+                    android:textColor="@android:color/white"
+                    android:background="#3498DB"
+                    android:paddingHorizontal="16dp" />
+
+            </LinearLayout>
+
+            <EditText
+                android:id="@+id/editSkuName"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:hint="商品名称 (如: 红色大码T恤)"
+                android:textSize="14sp"
+                android:padding="12dp"
+                android:background="#f8f9fa"
+                android:inputType="text" />
+
+        </LinearLayout>
+
+        <!-- 外部条码输入区域 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@android:color/white"
+            android:padding="16dp"
+            android:layout_marginTop="16dp"
+            android:elevation="2dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🏷️ 外部条码"
+                android:textSize="16sp"
+                android:textColor="#333333"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+
+                <EditText
+                    android:id="@+id/editExternalCode"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:hint="外部条码 (如: 6901028015462)"
+                    android:textSize="14sp"
+                    android:padding="12dp"
+                    android:background="#f8f9fa"
+                    android:layout_marginEnd="8dp"
+                    android:inputType="text" />
+
+                <Button
+                    android:id="@+id/btnScanExternal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:text="📱 扫条码"
+                    android:textSize="12sp"
+                    android:textColor="@android:color/white"
+                    android:background="#E67E22"
+                    android:paddingHorizontal="16dp" />
+
+            </LinearLayout>
+
+            <!-- 操作按钮 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnBind"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_weight="1"
+                    android:text="🔗 绑定"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/white"
+                    android:background="#27AE60"
+                    android:layout_marginEnd="8dp" />
+
+                <Button
+                    android:id="@+id/btnClear"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_weight="1"
+                    android:text="🗑️ 清空"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/white"
+                    android:background="#95A5A6"
+                    android:layout_marginStart="8dp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- 状态显示区域 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@android:color/white"
+            android:padding="16dp"
+            android:layout_marginTop="16dp"
+            android:elevation="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/txtStatus"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="📱 SKU条码绑定工具"
+                    android:textSize="14sp"
+                    android:textColor="#333333"
+                    android:textStyle="bold" />
+
+                <ProgressBar
+                    android:id="@+id/progressBar"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/txtResult"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="请扫描或输入SKU和外部条码"
+                android:textSize="12sp"
+                android:textColor="#666666"
+                android:padding="12dp"
+                android:background="#f0f0f0"
+                android:gravity="center" />
+
+        </LinearLayout>
+
+        <!-- 绑定记录列表 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@android:color/white"
+            android:padding="16dp"
+            android:layout_marginTop="16dp"
+            android:elevation="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="📋 绑定记录"
+                    android:textSize="16sp"
+                    android:textColor="#333333"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/btnRefresh"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="🔄 刷新"
+                    android:textSize="12sp"
+                    android:textColor="@android:color/white"
+                    android:background="#16A085"
+                    android:paddingHorizontal="12dp" />
+
+            </LinearLayout>
+
+            <ListView
+                android:id="@+id/listBindings"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:background="#f8f9fa"
+                android:divider="#e0e0e0"
+                android:dividerHeight="1dp" />
+
+        </LinearLayout>
+
+        <!-- 操作说明 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@android:color/white"
+            android:padding="16dp"
+            android:layout_marginTop="16dp"
+            android:elevation="2dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="💡 使用说明"
+                android:textSize="14sp"
+                android:textColor="#333333"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="1. 点击【扫SKU】或直接在SKU框内扫码\n2. 点击【扫条码】或直接在外部条码框内扫码\n3. 确认商品名称无误后点击【绑定】\n4. 绑定成功后会显示在下方记录列表中"
+                android:textSize="12sp"
+                android:textColor="#666666"
+                android:lineSpacingExtra="2dp" />
+
+        </LinearLayout>
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout> 
