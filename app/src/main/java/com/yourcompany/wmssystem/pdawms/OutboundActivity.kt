@@ -1367,17 +1367,39 @@ class OutboundActivity : AppCompatActivity() {
         for ((location, stock) in sortedLocations) {
             if (remainingNeed <= 0) break
             
-            val takeQuantity = minOf(remainingNeed, stock)
-            if (takeQuantity > 0) {
-                val newItem = baseItem.copy(
-                    location = location,
-                    quantity = takeQuantity,
-                    maxStock = stock
-                )
-                newItems.add(newItem)
-                remainingNeed -= takeQuantity
+            // 🔍 检查是否已有相同SKU+库位的记录
+            val existingIndex = outboundItems.indexOfFirst { item ->
+                item.sku == baseItem.sku && item.location == location
+            }
+            
+            if (existingIndex >= 0) {
+                // 已有记录，尝试累加
+                val existingItem = outboundItems[existingIndex]
+                val remainingStock = existingItem.maxStock - existingItem.quantity
+                val addQuantity = minOf(remainingNeed, remainingStock)
                 
-                Log.d("WMS_OUTBOUND", "📦 拆分新增: $location, 库存: $stock, 取用: $takeQuantity, 剩余需求: $remainingNeed")
+                if (addQuantity > 0) {
+                    val newQuantity = existingItem.quantity + addQuantity
+                    val updatedItem = existingItem.copy(quantity = newQuantity)
+                    outboundItems[existingIndex] = updatedItem
+                    
+                    Log.d("WMS_OUTBOUND", "✅ 智能拆分累加到现有记录: ${baseItem.sku} 在 $location，原数量 ${existingItem.quantity} + $addQuantity = $newQuantity")
+                    remainingNeed -= addQuantity
+                }
+            } else {
+                // 没有记录，创建新记录
+                val takeQuantity = minOf(remainingNeed, stock)
+                if (takeQuantity > 0) {
+                    val newItem = baseItem.copy(
+                        location = location,
+                        quantity = takeQuantity,
+                        maxStock = stock
+                    )
+                    newItems.add(newItem)
+                    remainingNeed -= takeQuantity
+                    
+                    Log.d("WMS_OUTBOUND", "📦 拆分新增: $location, 库存: $stock, 取用: $takeQuantity, 剩余需求: $remainingNeed")
+                }
             }
         }
         
@@ -1429,42 +1451,64 @@ class OutboundActivity : AppCompatActivity() {
         for ((location, stock) in sortedLocations) {
             if (remainingNeed <= 0) break
             
-            val takeQuantity = minOf(remainingNeed, stock)
-            if (takeQuantity > 0) {
-                // 🎯 为特定SKU创建单一选项的颜色和尺码列表
-                val lockedColors = listOf(ColorOption(
-                    color = colorData.color,
-                    imagePath = colorData.image_path ?: ""
-                ))
+            // 🔍 检查是否已有相同SKU+库位的记录
+            val existingIndex = outboundItems.indexOfFirst { item ->
+                item.sku == targetSku && item.location == location
+            }
+            
+            if (existingIndex >= 0) {
+                // 已有记录，尝试累加
+                val existingItem = outboundItems[existingIndex]
+                val remainingStock = existingItem.maxStock - existingItem.quantity
+                val addQuantity = minOf(remainingNeed, remainingStock)
                 
-                val lockedSizes = mapOf(colorData.color to listOf(SizeOption(
-                    skuCode = targetSku,
-                    skuSize = colorData.sizes?.firstOrNull { it.sku_code == targetSku }?.sku_size ?: "",
-                    locationStocks = locationStocks
-                )))
-                
-                val newItem = OutboundItem(
-                    sku = targetSku,
-                    productName = productData.product_name,
-                    location = location,
-                    quantity = takeQuantity,
-                    color = colorData.color,
-                    size = colorData.sizes?.firstOrNull { it.sku_code == targetSku }?.sku_size ?: "",
-                    batch = "",
-                    imageUrl = processImageUrl(colorData.image_path ?: ""),
-                    maxStock = stock,
-                    locationStocks = locationStocks,
-                    productId = productData.product_id,
-                    allColors = lockedColors,
-                    allSizes = lockedSizes,
-                    selectedColorIndex = 0,
-                    selectedSizeIndex = 0,
-                    isSkuLocked = true
-                )
-                newItems.add(newItem)
-                remainingNeed -= takeQuantity
-                
-                Log.d("WMS_OUTBOUND", "📦 从其他库位创建: $location, 库存: $stock, 取用: $takeQuantity, 剩余需求: $remainingNeed")
+                if (addQuantity > 0) {
+                    val newQuantity = existingItem.quantity + addQuantity
+                    val updatedItem = existingItem.copy(quantity = newQuantity)
+                    outboundItems[existingIndex] = updatedItem
+                    
+                    Log.d("WMS_OUTBOUND", "✅ 从其他库位累加到现有记录: $targetSku 在 $location，原数量 ${existingItem.quantity} + $addQuantity = $newQuantity")
+                    remainingNeed -= addQuantity
+                }
+            } else {
+                // 没有记录，创建新记录
+                val takeQuantity = minOf(remainingNeed, stock)
+                if (takeQuantity > 0) {
+                    // 🎯 为特定SKU创建单一选项的颜色和尺码列表
+                    val lockedColors = listOf(ColorOption(
+                        color = colorData.color,
+                        imagePath = colorData.image_path ?: ""
+                    ))
+                    
+                    val lockedSizes = mapOf(colorData.color to listOf(SizeOption(
+                        skuCode = targetSku,
+                        skuSize = colorData.sizes?.firstOrNull { it.sku_code == targetSku }?.sku_size ?: "",
+                        locationStocks = locationStocks
+                    )))
+                    
+                    val newItem = OutboundItem(
+                        sku = targetSku,
+                        productName = productData.product_name,
+                        location = location,
+                        quantity = takeQuantity,
+                        color = colorData.color,
+                        size = colorData.sizes?.firstOrNull { it.sku_code == targetSku }?.sku_size ?: "",
+                        batch = "",
+                        imageUrl = processImageUrl(colorData.image_path ?: ""),
+                        maxStock = stock,
+                        locationStocks = locationStocks,
+                        productId = productData.product_id,
+                        allColors = lockedColors,
+                        allSizes = lockedSizes,
+                        selectedColorIndex = 0,
+                        selectedSizeIndex = 0,
+                        isSkuLocked = true
+                    )
+                    newItems.add(newItem)
+                    remainingNeed -= takeQuantity
+                    
+                    Log.d("WMS_OUTBOUND", "📦 从其他库位创建: $location, 库存: $stock, 取用: $takeQuantity, 剩余需求: $remainingNeed")
+                }
             }
         }
         
