@@ -621,9 +621,24 @@ class OutboundActivity : AppCompatActivity() {
             
             // 检查预设数量是否超出总库存
             if (presetQuantity > totalStock) {
-                Toast.makeText(this@OutboundActivity, 
-                    "SKU ${skuData.sku_code} 库存不足！需要 $presetQuantity 件，总库存只有 $totalStock 件", 
-                    Toast.LENGTH_LONG).show()
+                val shortage = presetQuantity - totalStock
+                Log.d("WMS_OUTBOUND", "⚠️ 库存不足: 需要 $presetQuantity 件，总库存 $totalStock 件，缺少 $shortage 件")
+                
+                // 显示详细的库存不足信息
+                val message = "📦 库存不足提醒：\n" +
+                    "• 需要数量：$presetQuantity 件\n" +
+                    "• 当前库存：$totalStock 件\n" +
+                    "• 缺少数量：$shortage 件\n" +
+                    "• 建议补货：$shortage 件"
+                
+                AlertDialog.Builder(this@OutboundActivity)
+                    .setTitle("库存不足")
+                    .setMessage(message)
+                    .setPositiveButton("知道了") { _, _ ->
+                        Log.d("WMS_OUTBOUND", "用户确认库存不足提醒")
+                    }
+                    .setCancelable(false)
+                    .show()
                 return
             }
             
@@ -857,9 +872,25 @@ class OutboundActivity : AppCompatActivity() {
         
         // 检查预设数量是否超出总库存
         if (presetQuantity > totalStock) {
-            Toast.makeText(this@OutboundActivity, 
-                "SKU $targetSku 库存不足！需要 $presetQuantity 件，总库存只有 $totalStock 件", 
-                Toast.LENGTH_LONG).show()
+            val shortage = presetQuantity - totalStock
+            Log.d("WMS_OUTBOUND", "⚠️ 库存不足: 需要 $presetQuantity 件，总库存 $totalStock 件，缺少 $shortage 件")
+            
+            // 显示详细的库存不足信息
+            val message = "📦 库存不足提醒：\n" +
+                "• SKU：$targetSku\n" +
+                "• 需要数量：$presetQuantity 件\n" +
+                "• 当前库存：$totalStock 件\n" +
+                "• 缺少数量：$shortage 件\n" +
+                "• 建议补货：$shortage 件"
+            
+            AlertDialog.Builder(this@OutboundActivity)
+                .setTitle("库存不足")
+                .setMessage(message)
+                .setPositiveButton("知道了") { _, _ ->
+                    Log.d("WMS_OUTBOUND", "用户确认库存不足提醒")
+                }
+                .setCancelable(false)
+                .show()
             return
         }
         
@@ -1055,9 +1086,25 @@ class OutboundActivity : AppCompatActivity() {
                     
                     // 检查预设数量是否超出总库存
                     if (presetQuantity > totalStock) {
-                        Toast.makeText(this@OutboundActivity, 
-                            "SKU ${defaultSku!!.sku_code} 库存不足！需要 $presetQuantity 件，总库存只有 $totalStock 件", 
-                            Toast.LENGTH_LONG).show()
+                        val shortage = presetQuantity - totalStock
+                        Log.d("WMS_OUTBOUND", "⚠️ 库存不足: 需要 $presetQuantity 件，总库存 $totalStock 件，缺少 $shortage 件")
+                        
+                        // 显示详细的库存不足信息
+                        val message = "📦 库存不足提醒：\n" +
+                            "• SKU：${defaultSku!!.sku_code}\n" +
+                            "• 需要数量：$presetQuantity 件\n" +
+                            "• 当前库存：$totalStock 件\n" +
+                            "• 缺少数量：$shortage 件\n" +
+                            "• 建议补货：$shortage 件"
+                        
+                        AlertDialog.Builder(this@OutboundActivity)
+                            .setTitle("库存不足")
+                            .setMessage(message)
+                            .setPositiveButton("知道了") { _, _ ->
+                                Log.d("WMS_OUTBOUND", "用户确认库存不足提醒")
+                            }
+                            .setCancelable(false)
+                            .show()
                         return
                     }
                     
@@ -1138,9 +1185,25 @@ class OutboundActivity : AppCompatActivity() {
                 if (totalStock > 0) {
                     // 检查预设数量是否超出总库存
                     if (presetQuantity > totalStock) {
-                        Toast.makeText(this@OutboundActivity, 
-                            "商品 ${productData.product_code} 库存不足！需要 $presetQuantity 件，总库存只有 $totalStock 件", 
-                            Toast.LENGTH_LONG).show()
+                        val shortage = presetQuantity - totalStock
+                        Log.d("WMS_OUTBOUND", "⚠️ 库存不足: 需要 $presetQuantity 件，总库存 $totalStock 件，缺少 $shortage 件")
+                        
+                        // 显示详细的库存不足信息
+                        val message = "📦 库存不足提醒：\n" +
+                            "• 商品：${productData.product_code}\n" +
+                            "• 需要数量：$presetQuantity 件\n" +
+                            "• 当前库存：$totalStock 件\n" +
+                            "• 缺少数量：$shortage 件\n" +
+                            "• 建议补货：$shortage 件"
+                        
+                        AlertDialog.Builder(this@OutboundActivity)
+                            .setTitle("库存不足")
+                            .setMessage(message)
+                            .setPositiveButton("知道了") { _, _ ->
+                                Log.d("WMS_OUTBOUND", "用户确认库存不足提醒")
+                            }
+                            .setCancelable(false)
+                            .show()
                         return
                     }
                     
