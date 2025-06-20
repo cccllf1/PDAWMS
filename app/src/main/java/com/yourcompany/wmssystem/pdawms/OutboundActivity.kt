@@ -871,20 +871,28 @@ class OutboundActivity : AppCompatActivity() {
             }
         }
         
-        // 默认选择库存少的库位（优先清空小库位）
-        val defaultLocation = locationStocks.minByOrNull { it.value }?.key ?: "无货位"
+        // 优先选择已有记录的库位，如果没有则选择库存少的库位
+        val existingLocations = outboundItems.filter { it.sku == targetSku }
+            .map { it.location }
+            .filter { locationStocks.containsKey(it) }
+        
+        val defaultLocation = if (existingLocations.isNotEmpty()) {
+            // 优先选择已有记录的库位中库存最少的
+            existingLocations.minByOrNull { locationStocks[it] ?: Int.MAX_VALUE } ?: locationStocks.minByOrNull { it.value }?.key ?: "无货位"
+        } else {
+            // 没有已有记录，选择库存最少的库位
+            locationStocks.minByOrNull { it.value }?.key ?: "无货位"
+        }
         val defaultLocationStock = locationStocks[defaultLocation] ?: totalStock
         
         // 🔍 检查是否已存在相同SKU+库位的出库项目
         val existingIndex = outboundItems.indexOfFirst { item ->
             item.sku == targetSku && item.location == defaultLocation
         }
-        
         Log.d("WMS_OUTBOUND", "🔍 检查库位占用情况:")
         Log.d("WMS_OUTBOUND", "   目标SKU: $targetSku")
         Log.d("WMS_OUTBOUND", "   默认库位: $defaultLocation")
         Log.d("WMS_OUTBOUND", "   默认库位库存: $defaultLocationStock")
-        Log.d("WMS_OUTBOUND", "   预设数量: $presetQuantity")
         Log.d("WMS_OUTBOUND", "   已存在索引: $existingIndex")
         
         // 打印所有现有的出库项目
