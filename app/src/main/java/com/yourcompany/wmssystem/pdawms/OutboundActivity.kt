@@ -636,6 +636,18 @@ class OutboundActivity : AppCompatActivity() {
                 item.sku == skuData.sku_code && item.location == defaultLocation
             }
             
+            Log.d("WMS_OUTBOUND", "🔍 检查库位占用情况:")
+            Log.d("WMS_OUTBOUND", "   目标SKU: ${skuData.sku_code}")
+            Log.d("WMS_OUTBOUND", "   默认库位: $defaultLocation")
+            Log.d("WMS_OUTBOUND", "   默认库位库存: $defaultLocationStock")
+            Log.d("WMS_OUTBOUND", "   预设数量: $presetQuantity")
+            Log.d("WMS_OUTBOUND", "   已存在索引: $existingIndex")
+            
+            // 打印所有现有的出库项目
+            outboundItems.forEachIndexed { index, item ->
+                Log.d("WMS_OUTBOUND", "   现有项目[$index]: ${item.sku} 在 ${item.location}, 数量: ${item.quantity}/${item.maxStock}")
+            }
+            
             if (existingIndex >= 0) {
                 // 已存在，累加数量
                 val existingItem = outboundItems[existingIndex]
@@ -649,11 +661,23 @@ class OutboundActivity : AppCompatActivity() {
                     Log.d("WMS_OUTBOUND", "✅ 累加数量: ${skuData.sku_code} 在 $defaultLocation，原数量 ${existingItem.quantity} + $presetQuantity = $newQuantity")
                     Toast.makeText(this@OutboundActivity, "✅ 累加数量: ${skuData.sku_code} (+$presetQuantity)", Toast.LENGTH_SHORT).show()
                 } else {
-                    // 超出库存，提示用户
-                    Toast.makeText(this@OutboundActivity, 
-                        "库存不足！${skuData.sku_code} 在 $defaultLocation 最大库存 $maxAllowedQuantity 件，当前已有 ${existingItem.quantity} 件", 
-                        Toast.LENGTH_LONG).show()
-                    return
+                    // 超出库存，尝试从其他库位补充
+                    Log.d("WMS_OUTBOUND", "⚠️ 当前库位库存不足，尝试从其他库位补充")
+                    val usedQuantity = maxAllowedQuantity - existingItem.quantity
+                    val remainingNeed = presetQuantity - usedQuantity
+                    
+                    if (usedQuantity > 0) {
+                        // 先填满当前库位
+                        val updatedItem = existingItem.copy(quantity = maxAllowedQuantity)
+                        outboundItems[existingIndex] = updatedItem
+                        Log.d("WMS_OUTBOUND", "✅ 填满当前库位: ${skuData.sku_code} 在 $defaultLocation，数量: ${existingItem.quantity} → $maxAllowedQuantity")
+                    }
+                    
+                    // 从其他库位补充剩余数量
+                    if (remainingNeed > 0) {
+                        Log.d("WMS_OUTBOUND", "🧠 需要从其他库位补充: $remainingNeed 件")
+                        smartSplit(existingIndex, remainingNeed)
+                    }
                 }
             } else {
                 // 不存在，创建新的出库项目
@@ -856,6 +880,18 @@ class OutboundActivity : AppCompatActivity() {
             item.sku == targetSku && item.location == defaultLocation
         }
         
+        Log.d("WMS_OUTBOUND", "🔍 检查库位占用情况:")
+        Log.d("WMS_OUTBOUND", "   目标SKU: $targetSku")
+        Log.d("WMS_OUTBOUND", "   默认库位: $defaultLocation")
+        Log.d("WMS_OUTBOUND", "   默认库位库存: $defaultLocationStock")
+        Log.d("WMS_OUTBOUND", "   预设数量: $presetQuantity")
+        Log.d("WMS_OUTBOUND", "   已存在索引: $existingIndex")
+        
+        // 打印所有现有的出库项目
+        outboundItems.forEachIndexed { index, item ->
+            Log.d("WMS_OUTBOUND", "   现有项目[$index]: ${item.sku} 在 ${item.location}, 数量: ${item.quantity}/${item.maxStock}")
+        }
+        
         if (existingIndex >= 0) {
             // 已存在，累加数量
             val existingItem = outboundItems[existingIndex]
@@ -869,58 +905,65 @@ class OutboundActivity : AppCompatActivity() {
                 Log.d("WMS_OUTBOUND", "✅ 累加数量: $targetSku 在 $defaultLocation，原数量 ${existingItem.quantity} + $presetQuantity = $newQuantity")
                 Toast.makeText(this@OutboundActivity, "✅ 累加数量: $targetSku (+$presetQuantity)", Toast.LENGTH_SHORT).show()
             } else {
-                // 超出库存，提示用户
-                Toast.makeText(this@OutboundActivity, 
-                    "库存不足！$targetSku 在 $defaultLocation 最大库存 $maxAllowedQuantity 件，当前已有 ${existingItem.quantity} 件", 
-                    Toast.LENGTH_LONG).show()
-                return
+                // 超出库存，尝试从其他库位补充
+                Log.d("WMS_OUTBOUND", "⚠️ 当前库位库存不足，尝试从其他库位补充")
+                val usedQuantity = maxAllowedQuantity - existingItem.quantity
+                val remainingNeed = presetQuantity - usedQuantity
+                
+                if (usedQuantity > 0) {
+                    // 先填满当前库位
+                    val updatedItem = existingItem.copy(quantity = maxAllowedQuantity)
+                    outboundItems[existingIndex] = updatedItem
+                    Log.d("WMS_OUTBOUND", "✅ 填满当前库位: $targetSku 在 $defaultLocation，数量: ${existingItem.quantity} → $maxAllowedQuantity")
+                }
+                
+                // 从其他库位补充剩余数量
+                if (remainingNeed > 0) {
+                    Log.d("WMS_OUTBOUND", "🧠 需要从其他库位补充: $remainingNeed 件")
+                    smartSplit(existingIndex, remainingNeed)
+                }
             }
         } else {
-            // 不存在，创建新的出库项目
+            // 检查是否有相同SKU的其他库位记录可以累加
+            val sameSkuItems = outboundItems.filter { it.sku == targetSku }
+            Log.d("WMS_OUTBOUND", "🔍 查找相同SKU的记录: 找到 ${sameSkuItems.size} 条")
             
-            // 🎯 为特定SKU创建单一选项的颜色和尺码列表（用于显示，但会被禁用）
-            val lockedColors = listOf(ColorOption(
-                color = colorData.color,
-                imagePath = colorData.image_path ?: ""
-            ))
-            
-            val lockedSizes = mapOf(colorData.color to listOf(SizeOption(
-                skuCode = sizeData.sku_code,
-                skuSize = sizeData.sku_size ?: "",
-                locationStocks = locationStocks
-            )))
-            
-            // 计算实际创建的数量
-            val actualQuantity = minOf(presetQuantity, defaultLocationStock)
-            
-            val outboundItem = OutboundItem(
-                sku = targetSku,
-                productName = productData.product_name,
-                location = defaultLocation,
-                quantity = actualQuantity,
-                color = colorData.color,
-                size = sizeData.sku_size ?: "",
-                batch = "",
-                imageUrl = processImageUrl(colorData.image_path ?: ""),
-                maxStock = defaultLocationStock,
-                locationStocks = locationStocks,
-                productId = productData.product_id,
-                allColors = lockedColors,  // 提供单一颜色选项用于显示
-                allSizes = lockedSizes,    // 提供单一尺码选项用于显示
-                selectedColorIndex = 0,   // 锁定为第一个（也是唯一的）选项
-                selectedSizeIndex = 0,    // 锁定为第一个（也是唯一的）选项
-                isSkuLocked = true        // 标记为锁定SKU，适配器会禁用选择器
-            )
-            outboundItems.add(outboundItem)
-            Log.d("WMS_OUTBOUND", "✅ 新增出库项: $targetSku 在 $defaultLocation，数量 $actualQuantity")
-            
-            // 如果预设数量超过默认库位库存，触发智能拆分
-            if (presetQuantity > defaultLocationStock) {
-                val shortage = presetQuantity - defaultLocationStock
-                Log.d("WMS_OUTBOUND", "🧠 需要智能拆分: 预设 $presetQuantity，当前库位 $defaultLocationStock，缺少 $shortage")
+            if (sameSkuItems.isNotEmpty()) {
+                // 尝试累加到有剩余库存的库位
+                var addedToExisting = false
+                for (item in sameSkuItems) {
+                    val remainingStock = item.maxStock - item.quantity
+                    if (remainingStock > 0) {
+                        val addQuantity = minOf(presetQuantity, remainingStock)
+                        val itemIndex = outboundItems.indexOf(item)
+                        val newQuantity = item.quantity + addQuantity
+                        val updatedItem = item.copy(quantity = newQuantity)
+                        outboundItems[itemIndex] = updatedItem
+                        
+                        Log.d("WMS_OUTBOUND", "✅ 累加到现有记录: $targetSku 在 ${item.location}，原数量 ${item.quantity} + $addQuantity = $newQuantity")
+                        Toast.makeText(this@OutboundActivity, "✅ 累加数量: $targetSku 在 ${item.location} (+$addQuantity)", Toast.LENGTH_SHORT).show()
+                        
+                        // 如果还有剩余需求，继续处理
+                        val remainingNeed = presetQuantity - addQuantity
+                        if (remainingNeed > 0) {
+                            Log.d("WMS_OUTBOUND", "🧠 还有剩余需求: $remainingNeed 件，从其他库位补充")
+                            smartSplit(itemIndex, remainingNeed)
+                        }
+                        
+                        addedToExisting = true
+                        break
+                    }
+                }
                 
-                val position = outboundItems.size - 1
-                smartSplit(position, shortage)
+                if (!addedToExisting) {
+                    // 所有现有记录都已满，创建新记录
+                    Log.d("WMS_OUTBOUND", "⚠️ 所有现有记录都已满，创建新记录")
+                    createNewItem(targetSku, colorData, productData, presetQuantity, locationStocks, defaultLocation, defaultLocationStock)
+                }
+            } else {
+                // 没有相同SKU的记录，创建新记录
+                Log.d("WMS_OUTBOUND", "📦 没有相同SKU的记录，创建新记录")
+                createNewItem(targetSku, colorData, productData, presetQuantity, locationStocks, defaultLocation, defaultLocationStock)
             }
         }
         
@@ -1032,11 +1075,23 @@ class OutboundActivity : AppCompatActivity() {
                             Log.d("WMS_OUTBOUND", "✅ 累加数量: ${defaultSku!!.sku_code} 在 $defaultLocation，原数量 ${existingItem.quantity} + $presetQuantity = $newQuantity")
                             Toast.makeText(this@OutboundActivity, "✅ 累加数量: ${defaultSku!!.sku_code} (+$presetQuantity)", Toast.LENGTH_SHORT).show()
                         } else {
-                            // 超出库存，提示用户
-                            Toast.makeText(this@OutboundActivity, 
-                                "库存不足！${defaultSku!!.sku_code} 在 $defaultLocation 最大库存 $maxAllowedQuantity 件，当前已有 ${existingItem.quantity} 件", 
-                                Toast.LENGTH_LONG).show()
-                            return
+                            // 超出库存，尝试从其他库位补充
+                            Log.d("WMS_OUTBOUND", "⚠️ 当前库位库存不足，尝试从其他库位补充")
+                            val usedQuantity = maxAllowedQuantity - existingItem.quantity
+                            val remainingNeed = presetQuantity - usedQuantity
+                            
+                            if (usedQuantity > 0) {
+                                // 先填满当前库位
+                                val updatedItem = existingItem.copy(quantity = maxAllowedQuantity)
+                                outboundItems[existingIndex] = updatedItem
+                                Log.d("WMS_OUTBOUND", "✅ 填满当前库位: ${defaultSku!!.sku_code} 在 $defaultLocation，数量: ${existingItem.quantity} → $maxAllowedQuantity")
+                            }
+                            
+                            // 从其他库位补充剩余数量
+                            if (remainingNeed > 0) {
+                                Log.d("WMS_OUTBOUND", "🧠 需要从其他库位补充: $remainingNeed 件")
+                                smartSplit(existingIndex, remainingNeed)
+                            }
                         }
                     } else {
                         // 不存在，创建新的出库项目
@@ -1343,6 +1398,89 @@ class OutboundActivity : AppCompatActivity() {
         Log.d("WMS_OUTBOUND", "✅ 智能拆分完成(库存少优先): 新增 $successCount 项，总需求 ${shortage}, 实际满足 $successQuantity")
     }
     
+    private fun createFromOtherLocations(targetSku: String, colorData: ColorInfo, productData: Product, presetQuantity: Int, locationStocks: Map<String, Int>) {
+        Log.d("WMS_OUTBOUND", "🔍 从其他库位创建: $targetSku, 需要数量: $presetQuantity")
+        
+        // 获取其他有库存的库位（排除已占用的库位）
+        val occupiedLocations = outboundItems.filter { it.sku == targetSku }.map { it.location }.toSet()
+        val availableLocations = locationStocks.filter { (location, stock) ->
+            location !in occupiedLocations && stock > 0
+        }.toMutableMap()
+        
+        if (availableLocations.isEmpty()) {
+            Toast.makeText(this@OutboundActivity, "没有其他库位有库存可供创建", Toast.LENGTH_LONG).show()
+            return
+        }
+        
+        var remainingNeed = presetQuantity
+        val newItems = mutableListOf<OutboundItem>()
+        
+        // 按库存量升序排列，优先使用库存少的库位（先清空小库位）
+        val sortedLocations = availableLocations.toList().sortedBy { it.second }
+        
+        for ((location, stock) in sortedLocations) {
+            if (remainingNeed <= 0) break
+            
+            val takeQuantity = minOf(remainingNeed, stock)
+            if (takeQuantity > 0) {
+                // 🎯 为特定SKU创建单一选项的颜色和尺码列表
+                val lockedColors = listOf(ColorOption(
+                    color = colorData.color,
+                    imagePath = colorData.image_path ?: ""
+                ))
+                
+                val lockedSizes = mapOf(colorData.color to listOf(SizeOption(
+                    skuCode = targetSku,
+                    skuSize = colorData.sizes?.firstOrNull { it.sku_code == targetSku }?.sku_size ?: "",
+                    locationStocks = locationStocks
+                )))
+                
+                val newItem = OutboundItem(
+                    sku = targetSku,
+                    productName = productData.product_name,
+                    location = location,
+                    quantity = takeQuantity,
+                    color = colorData.color,
+                    size = colorData.sizes?.firstOrNull { it.sku_code == targetSku }?.sku_size ?: "",
+                    batch = "",
+                    imageUrl = processImageUrl(colorData.image_path ?: ""),
+                    maxStock = stock,
+                    locationStocks = locationStocks,
+                    productId = productData.product_id,
+                    allColors = lockedColors,
+                    allSizes = lockedSizes,
+                    selectedColorIndex = 0,
+                    selectedSizeIndex = 0,
+                    isSkuLocked = true
+                )
+                newItems.add(newItem)
+                remainingNeed -= takeQuantity
+                
+                Log.d("WMS_OUTBOUND", "📦 从其他库位创建: $location, 库存: $stock, 取用: $takeQuantity, 剩余需求: $remainingNeed")
+            }
+        }
+        
+        if (remainingNeed > 0) {
+            Toast.makeText(this@OutboundActivity, "警告：仍有 $remainingNeed 件无法满足", Toast.LENGTH_LONG).show()
+        }
+        
+        // 将新项目添加到列表中
+        outboundItems.addAll(newItems)
+        
+        // 更新UI
+        outboundAdapter.notifyDataSetChanged()
+        updateOutboundTitle()
+        
+        val successCount = newItems.size
+        val successQuantity = newItems.sumOf { it.quantity }
+        val createDetails = newItems.joinToString(", ") { "${it.location}:${it.quantity}件" }
+        Toast.makeText(this@OutboundActivity, 
+            "✅ 从其他库位创建完成！\n优先清空小库位: $createDetails", 
+            Toast.LENGTH_LONG).show()
+        
+        Log.d("WMS_OUTBOUND", "✅ 从其他库位创建完成: 新增 $successCount 项，总需求 ${presetQuantity}, 实际满足 $successQuantity")
+    }
+    
     private fun processImageUrl(rawImageUrl: String): String {
         return if (rawImageUrl.isNotEmpty()) {
             if (rawImageUrl.startsWith("http://") || rawImageUrl.startsWith("https://")) {
@@ -1425,5 +1563,54 @@ class OutboundActivity : AppCompatActivity() {
             Log.e("WMS_OUTBOUND", "注销广播接收器失败: ${e.message}")
         }
         Log.d("WMS_OUTBOUND", "�� 出库页面销毁")
+    }
+
+    private fun createNewItem(targetSku: String, colorData: ColorInfo, productData: Product, presetQuantity: Int, locationStocks: Map<String, Int>, defaultLocation: String, defaultLocationStock: Int) {
+        Log.d("WMS_OUTBOUND", "📦 创建新项目: $targetSku 在 $defaultLocation")
+        
+        // 🎯 为特定SKU创建单一选项的颜色和尺码列表（用于显示，但会被禁用）
+        val lockedColors = listOf(ColorOption(
+            color = colorData.color,
+            imagePath = colorData.image_path ?: ""
+        ))
+        
+        val lockedSizes = mapOf(colorData.color to listOf(SizeOption(
+            skuCode = targetSku,
+            skuSize = colorData.sizes?.firstOrNull { it.sku_code == targetSku }?.sku_size ?: "",
+            locationStocks = locationStocks
+        )))
+        
+        // 计算实际创建的数量
+        val actualQuantity = minOf(presetQuantity, defaultLocationStock)
+        
+        val outboundItem = OutboundItem(
+            sku = targetSku,
+            productName = productData.product_name,
+            location = defaultLocation,
+            quantity = actualQuantity,
+            color = colorData.color,
+            size = colorData.sizes?.firstOrNull { it.sku_code == targetSku }?.sku_size ?: "",
+            batch = "",
+            imageUrl = processImageUrl(colorData.image_path ?: ""),
+            maxStock = defaultLocationStock,
+            locationStocks = locationStocks,
+            productId = productData.product_id,
+            allColors = lockedColors,  // 提供单一颜色选项用于显示
+            allSizes = lockedSizes,    // 提供单一尺码选项用于显示
+            selectedColorIndex = 0,   // 锁定为第一个（也是唯一的）选项
+            selectedSizeIndex = 0,    // 锁定为第一个（也是唯一的）选项
+            isSkuLocked = true        // 标记为锁定SKU，适配器会禁用选择器
+        )
+        outboundItems.add(outboundItem)
+        Log.d("WMS_OUTBOUND", "✅ 新增出库项: $targetSku 在 $defaultLocation，数量 $actualQuantity")
+        
+        // 如果预设数量超过默认库位库存，触发智能拆分
+        if (presetQuantity > defaultLocationStock) {
+            val shortage = presetQuantity - defaultLocationStock
+            Log.d("WMS_OUTBOUND", "🧠 需要智能拆分: 预设 $presetQuantity，当前库位 $defaultLocationStock，缺少 $shortage")
+            
+            val position = outboundItems.size - 1
+            smartSplit(position, shortage)
+        }
     }
 } 
