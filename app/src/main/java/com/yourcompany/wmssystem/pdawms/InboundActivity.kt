@@ -102,6 +102,8 @@ class InboundListAdapter(
         val spinnerLocation: Spinner
         val editQuantity: EditText
         val btnDelete: Button
+        val editSkuTotalStock: EditText
+        val editLocationStock: EditText
         
         init {
             try {
@@ -112,6 +114,8 @@ class InboundListAdapter(
                 spinnerLocation = view.findViewById(R.id.spinnerLocation)
                 editQuantity = view.findViewById(R.id.editQuantity)
                 btnDelete = view.findViewById(R.id.btnDelete)
+                editSkuTotalStock = view.findViewById(R.id.editImageNote) // Re-purposing this view
+                editLocationStock = view.findViewById(R.id.editImageNote2) // Re-purposing this view
                 Log.d("ViewHolder", "所有视图初始化成功")
             } catch (e: Exception) {
                 Log.e("ViewHolder", "视图初始化失败: ${e.message}", e)
@@ -421,6 +425,8 @@ class InboundListAdapter(
                         onItemUpdate(holder.adapterPosition, updatedItem)
                         
                         Log.d("InboundAdapter", "货位选择: $selectedLocation")
+                        // Update location stock display when location changes
+                        updateStockDisplay(holder, updatedItem.productData, updatedItem.sku, selectedLocation)
                     } catch (e: Exception) {
                         Log.e("InboundAdapter", "🚨 货位选择器发生异常: ${e.message}", e)
                     }
@@ -460,6 +466,15 @@ class InboundListAdapter(
             holder.btnDelete.setOnClickListener {
                 onDeleteClick(position)
             }
+            
+            // Set hints for the stock fields
+            holder.editSkuTotalStock.hint = "SKU总库存"
+            holder.editLocationStock.hint = "库位库存"
+            holder.editSkuTotalStock.isEnabled = false // Make them read-only
+            holder.editLocationStock.isEnabled = false
+            
+            // Update stock information display
+            updateStockDisplay(holder, item.productData, item.sku, item.location)
             
             Log.d("InboundAdapter", "数据绑定完成")
         } catch (e: Exception) {
@@ -598,6 +613,21 @@ class InboundListAdapter(
             val baseUrl = ApiClient.getServerUrl(context)
             (baseUrl.trimEnd('/') + "/" + imagePath.trimStart('/'))
         }
+    }
+
+    // Helper function moved to the adapter's scope
+    private fun updateStockDisplay(holder: ViewHolder, product: Product?, skuCode: String, locationCode: String) {
+        var skuTotal = 0
+        var locTotal = 0
+        product?.colors?.asSequence()
+            ?.flatMap { it.sizes ?: emptyList() }
+            ?.find { it.sku_code == skuCode }
+            ?.also { skuInfo ->
+                skuTotal = skuInfo.sku_total_quantity ?: 0
+                locTotal = skuInfo.locations?.find { it.location_code == locationCode }?.stock_quantity ?: 0
+            }
+        holder.editSkuTotalStock.setText(skuTotal.toString())
+        holder.editLocationStock.setText(locTotal.toString())
     }
 }
 
@@ -861,536 +891,87 @@ class InboundActivity : AppCompatActivity() {
     }
 
     private fun addProductToList() {
-        // 🎯 版本标识：v6.7 绝对不丢失版
-        Log.e("InboundActivity", "🎯🎯🎯 v6.7 绝对不丢失版 正在运行！🎯🎯🎯")
-        Log.e("InboundActivity", "★★★ addProductToList() 方法被调用了！★★★")
-        
-        // 🚨 强制清理历史重复记录 - 每次扫描前都执行
-        Log.e("InboundActivity", "🚨🚨🚨 强制清理历史重复记录！🚨🚨🚨")
-        val beforeSize = inboundItems.size
-        mergeduplicateItems()
-        val afterSize = inboundItems.size
-        if (beforeSize != afterSize) {
-            Log.e("InboundActivity", "🧹 清理完成: $beforeSize → $afterSize")
-        }
-        
-        // 🔥 新增：检测和删除与扫描码不匹配的错误记录
-        Log.e("InboundActivity", "🔥🔥🔥 检测错误数据！🔥🔥🔥")
-        val scannedParts = editProductCode.text.toString().split("-")
-        if (scannedParts.size >= 3) {
-            val scannedProduct = scannedParts[0]
-            val scannedColor = scannedParts[1] 
-            val scannedSize = scannedParts[2]
-            
-            Log.e("InboundActivity", "扫描解析: 商品=$scannedProduct, 颜色=$scannedColor, 尺码=$scannedSize")
-            
-            // 检查是否存在相同商品和颜色但不同尺码的错误记录
-            val toRemove = mutableListOf<Int>()
-            inboundItems.forEachIndexed { index, item ->
-                val itemParts = item.sku.split("-")
-                if (itemParts.size >= 3) {
-                    val itemProduct = itemParts[0]
-                    val itemColor = itemParts[1]
-                    val itemSize = itemParts[2]
-                    
-                    // 如果是相同商品+颜色但不同尺码，标记删除
-                    if (itemProduct == scannedProduct && itemColor == scannedColor && itemSize != scannedSize) {
-                        Log.e("InboundActivity", "🗑️ 发现错误记录[$index]: ${item.sku} (应该是${scannedSize}码，但显示${itemSize}码)")
-                        toRemove.add(index)
-                    }
-                }
-            }
-            
-            // 从后往前删除，避免索引错乱
-            toRemove.sortedDescending().forEach { index ->
-                val removedItem = inboundItems.removeAt(index)
-                Log.e("InboundActivity", "🗑️ 已删除错误记录: ${removedItem.sku}")
-            }
-            
-            if (toRemove.isNotEmpty()) {
-                inboundListAdapter.notifyDataSetChanged()
-                Log.e("InboundActivity", "🗑️ 删除了${toRemove.size}条错误记录")
-                Toast.makeText(this, "已清理${toRemove.size}条错误的尺码记录", Toast.LENGTH_LONG).show()
-            }
-        }
-        
         val productCode = editProductCode.text.toString().trim()
-        Log.e("InboundActivity", "输入的商品编码: [$productCode]")
-        
         if (productCode.isEmpty()) {
-            Toast.makeText(this, "请输入商品编码", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "请输入或扫描商品编码", Toast.LENGTH_SHORT).show()
             return
         }
-
-        // 🔒 防止重复处理
-        val currentTime = System.currentTimeMillis()
-        
-        // 🔍 扫描前状态检查
-        Log.d("InboundActivity", "📊 扫描前列表状态:")
-        Log.d("InboundActivity", "📊 列表大小: ${inboundItems.size}")
-        inboundItems.forEachIndexed { index, item ->
-            Log.d("InboundActivity", "📊 [$index]: sku=${item.sku}, quantity=${item.quantity}")
-        }
-        
-        // 🚀 允许大量并发，但限制过度并发（最多同时处理10个扫描）
-        if (scanQueue.size >= 10) {
-            Log.w("InboundActivity", "⚠️ 并发处理超限，当前处理中: ${scanQueue.size}，忽略: $productCode")
-            return
-        }
-        
-        // 🚀 极速防重复：只有当确实是相同条码且在100ms内才阻止（基本不限制）
-        if (productCode == lastScanCode && currentTime - lastScanTime < 100) {
-            Log.w("InboundActivity", "⚠️ 极短时间重复扫描被忽略: $productCode (距上次扫描 ${currentTime - lastScanTime}ms)")
-            return
-        }
-        
-        scanQueue.add(productCode)
-        Log.d("InboundActivity", "📈 扫描计数器: ${scanQueue.size} (当前并发处理数)")
-        // 注意：不在这里更新lastScanTime和lastScanCode，而是在处理完成后根据结果决定
-        
-        // 获取货位输入，空白时统一设为"无货位"
-        val locationInput = editLocationInput.text.toString().trim()
-        val selectedLocation = if (locationInput.isNotEmpty() && locationInput != productCode) locationInput else "无货位"
-        
-        Log.d("InboundActivity", "货位输入: [$locationInput] -> 选择货位: [$selectedLocation]")
-        Log.d("InboundActivity", "⚠️ 注意：如果货位输入和商品编码相同，则视为无货位")
-        
-        // 清空货位输入框，避免被扫码数据污染
-        if (locationInput == productCode) {
-            editLocationInput.setText("")
-        }
-        
-        // 如果是新输入的货位，添加到选项列表中
-        if (selectedLocation.isNotEmpty() && selectedLocation != "无货位" && !locationOptions.contains(selectedLocation)) {
-            locationOptions.add(selectedLocation)
-            locationOptions.sort() // 保持排序
-            Log.d("InboundActivity", "添加新货位到选项列表: $selectedLocation")
-            
-            // 更新AutoCompleteTextView的适配器
-            runOnUiThread {
-                val adapter = ArrayAdapter(this@InboundActivity, android.R.layout.simple_dropdown_item_1line, locationOptions)
-                editLocationInput.setAdapter(adapter)
-            }
-        }
-
-        // 先进行API查询获取真实的SKU信息，然后再检查重复
-
-        // 使用API查询商品信息
         lifecycleScope.launch {
-            try {
-                Log.d("InboundActivity", "======== 开始API查询过程 ========")
-                Log.d("InboundActivity", "查询商品编码: $productCode")
-                Log.d("InboundActivity", "服务器地址: ${ApiClient.getServerUrl(this@InboundActivity)}")
-                Log.d("InboundActivity", "登录状态: ${ApiClient.isLoggedIn()}")
-                Log.d("InboundActivity", "用户ID: ${ApiClient.getCurrentUserId()}")
-                
-                var productData: Product? = null
-                var skuCode: String? = null
-                var productName = "未知商品"
-                var defaultColor = "默认颜色"
-                var defaultSize = "默认尺码"
-                var imageUrl = ""
-                
-                // 🔧 本地条码解析：优先从条码中提取颜色和尺码信息
-                val localParsedInfo = parseProductCodeLocally(productCode)
-                var useLocalParsing = false
-                var lockedColor = "默认颜色"
-                var lockedSize = "默认尺码"
-                
-                if (localParsedInfo != null) {
-                    // 🔒 锁定本地解析结果，绝对不允许被API覆盖
-                    lockedColor = localParsedInfo.color
-                    lockedSize = localParsedInfo.size
-                    defaultColor = lockedColor
-                    defaultSize = lockedSize
-                    productName = localParsedInfo.productCode
-                    useLocalParsing = true
-                    Log.d("InboundActivity", "🔒 本地解析锁定: 商品=${localParsedInfo.productCode}, 颜色=$lockedColor, 尺码=$lockedSize")
-                } else {
-                    Log.d("InboundActivity", "❌ 本地解析失败，使用API解析")
-                }
-
-                // 1. 先尝试作为商品编码查询
-                try {
-                    Log.d("InboundActivity", "开始查询商品编码: $productCode")
-                    val response = ApiClient.getApiService().getProductByCode(productCode)
-                    Log.d("InboundActivity", "API响应状态: ${response.code()}")
-                    
-                    if (response.isSuccessful) {
-                        val apiResponse = response.body()
-                        Log.d("InboundActivity", "API响应内容: success=${apiResponse?.success}, data存在=${apiResponse?.data != null}")
-                        
-                        if (apiResponse?.success == true && apiResponse.data != null) {
-                            productData = apiResponse.data
-                            productName = productData.product_name
-                            skuCode = productData.matched_sku?.sku_code ?: productCode
-                            
-                            // 🔒 如果本地解析成功，则绝对使用本地解析结果，完全忽略API数据
-                            if (useLocalParsing) {
-                                // 强制使用锁定的本地解析结果
-                                defaultColor = lockedColor
-                                defaultSize = lockedSize
-                                Log.d("InboundActivity", "🔒 强制使用本地解析: 颜色=$lockedColor, 尺码=$lockedSize (完全忽略API)")
-                            } else {
-                                // 只有本地解析失败时，才使用API的颜色尺码信息
-                                if (productData.matched_sku?.sku_color?.isNotEmpty() == true) {
-                                    defaultColor = productData.matched_sku.sku_color
-                                    Log.d("InboundActivity", "✅ 使用API颜色: $defaultColor (本地解析失败)")
-                                }
-                                if (productData.matched_sku?.sku_size?.isNotEmpty() == true) {
-                                    defaultSize = productData.matched_sku.sku_size
-                                    Log.d("InboundActivity", "✅ 使用API尺码: $defaultSize (本地解析失败)")
-                                }
-                            }
-                            Log.d("InboundActivity", "✅ 最终使用结果: 颜色=$defaultColor, 尺码=$defaultSize")
-                            
-                            // 获取图片URL - 优先使用匹配的SKU图片，然后是商品图片
-                            val rawImageUrl = productData.matched_sku?.image_path 
-                                ?: productData.image_path 
-                                ?: ""
-                            
-                            // 处理图片URL，如果是相对路径则拼接服务器地址
-                            imageUrl = if (rawImageUrl.isNotEmpty()) {
-                                if (rawImageUrl.startsWith("http://") || rawImageUrl.startsWith("https://")) {
-                                    rawImageUrl
-                                } else {
-                                    val baseUrl = ApiClient.getServerUrl(this@InboundActivity)
-                                    "${baseUrl.trimEnd('/')}/$rawImageUrl"
-                                }
-                            } else {
-                                ""
-                            }
-                            
-                            Log.d("InboundActivity", "商品查询成功: name=$productName, colors=${productData.colors?.size}, skus=${productData.skus?.size}")
-                            if (productData.colors != null) {
-                                Log.d("InboundActivity", "颜色列表: ${productData.colors.map { it.color }}")
-                            }
-                            if (productData.skus != null) {
-                                Log.d("InboundActivity", "SKU列表: ${productData.skus.map { "${it.sku_color}/${it.sku_size}" }}")
-                            }
-                        } else {
-                            Log.w("InboundActivity", "API返回失败或无数据: ${apiResponse?.error_message}")
-                        }
-                    } else {
-                        Log.w("InboundActivity", "API调用失败: ${response.code()} - ${response.message()}")
-                    }
-                } catch (e: Exception) {
-                    Log.e("InboundActivity", "商品编码查询异常: ${e.message}", e)
-                }
-
-                // 2. 如果商品编码查询失败，尝试外部条码查询
-                if (productData == null) {
-                    try {
-                        Log.d("InboundActivity", "商品编码查询无结果，尝试外部条码查询: $productCode")
-                        val response = ApiClient.getApiService().getProductByExternalCode(productCode)
-                        Log.d("InboundActivity", "外部条码API响应状态: ${response.code()}")
-                        
-                        if (response.isSuccessful) {
-                            val apiResponse = response.body()
-                            Log.d("InboundActivity", "外部条码API响应: success=${apiResponse?.success}, data存在=${apiResponse?.data != null}")
-                            
-                            if (apiResponse?.success == true && apiResponse.data != null) {
-                                productData = apiResponse.data
-                                productName = productData.product_name
-                                skuCode = productData.matched_sku?.sku_code ?: productCode
-                                
-                                // 🔒 如果本地解析成功，则绝对使用本地解析结果，完全忽略外部API数据
-                                if (useLocalParsing) {
-                                    // 强制使用锁定的本地解析结果
-                                    defaultColor = lockedColor
-                                    defaultSize = lockedSize
-                                    Log.d("InboundActivity", "🔒 强制使用本地解析: 颜色=$lockedColor, 尺码=$lockedSize (完全忽略外部API)")
-                                } else {
-                                    // 只有本地解析失败时，才使用外部API的颜色尺码信息
-                                    if (productData.matched_sku?.sku_color?.isNotEmpty() == true) {
-                                        defaultColor = productData.matched_sku.sku_color
-                                        Log.d("InboundActivity", "✅ 使用外部API颜色: $defaultColor (本地解析失败)")
-                                    }
-                                    if (productData.matched_sku?.sku_size?.isNotEmpty() == true) {
-                                        defaultSize = productData.matched_sku.sku_size
-                                        Log.d("InboundActivity", "✅ 使用外部API尺码: $defaultSize (本地解析失败)")
-                                    }
-                                }
-                                Log.d("InboundActivity", "✅ 外部API最终使用结果: 颜色=$defaultColor, 尺码=$defaultSize")
-                                
-                                // 获取图片URL - 优先使用匹配的SKU图片，然后是商品图片
-                                val rawImageUrl = productData.matched_sku?.image_path 
-                                    ?: productData.image_path 
-                                    ?: ""
-                                
-                                // 处理图片URL，如果是相对路径则拼接服务器地址
-                                imageUrl = if (rawImageUrl.isNotEmpty()) {
-                                    if (rawImageUrl.startsWith("http://") || rawImageUrl.startsWith("https://")) {
-                                        rawImageUrl
-                                    } else {
-                                        val baseUrl = ApiClient.getServerUrl(this@InboundActivity)
-                                        "${baseUrl.trimEnd('/')}/$rawImageUrl"
-                                    }
-                                } else {
-                                    ""
-                                }
-                                
-                                Log.d("InboundActivity", "外部条码查询成功: name=$productName, colors=${productData.colors?.size}, skus=${productData.skus?.size}")
-                            } else {
-                                Log.w("InboundActivity", "外部条码API返回失败或无数据: ${apiResponse?.error_message}")
-                            }
-                        } else {
-                            Log.w("InboundActivity", "外部条码API调用失败: ${response.code()} - ${response.message()}")
-                        }
-                    } catch (e: Exception) {
-                        Log.e("InboundActivity", "外部条码查询异常: ${e.message}", e)
-                    }
-                }
-
-                runOnUiThread {
-                    // 如果获取到了商品数据，设置真实的SKU选项
-                    if (productData != null) {
-                        inboundListAdapter.setProductSkuOptions(
-                            productCode = productCode,
-                            colors = productData.colors,
-                            skus = productData.skus
-                        )
-                    }
-                    
-                    val finalSkuCode = skuCode ?: productCode
-                    
-                    // 🔒 最终确保使用锁定的本地解析结果
-                    if (useLocalParsing) {
-                        defaultColor = lockedColor
-                        defaultSize = lockedSize
-                        Log.d("InboundActivity", "🔒 最终锁定确认: 颜色=$lockedColor, 尺码=$lockedSize")
-                    } else if (productData != null && productData.colors != null && productData.colors.isNotEmpty()) {
-                        // 🎯 对于有多种颜色的商品，使用第一个颜色作为初始选择（用户可以修改）
-                        defaultColor = productData.colors[0].color
-                        // 获取该颜色的第一个尺码
-                        if (productData.colors[0].sizes != null && productData.colors[0].sizes!!.isNotEmpty()) {
-                            defaultSize = productData.colors[0].sizes!![0].sku_size ?: "均码"
-                        }
-                        Log.d("InboundActivity", "🎨 设置初始颜色选择: $defaultColor, 尺码: $defaultSize (用户可修改)")
-                    }
-                    
-                    // 添加详细的调试日志
-                    Log.d("InboundActivity", "=== 重复检查调试信息 ===")
-                    Log.d("InboundActivity", "扫描条码: $productCode")
-                    Log.d("InboundActivity", "最终SKU: $finalSkuCode")
-                    Log.d("InboundActivity", "选择货位: $selectedLocation")
-                    Log.d("InboundActivity", "默认颜色: $defaultColor")
-                    Log.d("InboundActivity", "默认尺码: $defaultSize")
-                    Log.d("InboundActivity", "本地解析状态: $useLocalParsing")
-                    Log.d("InboundActivity", "当前列表中的商品数量: ${inboundItems.size}")
-                    
-                    // 先修复现有商品的空货位问题（统一为"无货位"）
-                    for (i in inboundItems.indices) {
-                        val item = inboundItems[i]
-                        if (item.location.isEmpty()) {
-                            inboundItems[i] = item.copy(location = "无货位")
-                            Log.d("InboundActivity", "修复商品[$i]货位: 空白 -> 无货位")
-                        }
-                    }
-                    
-                    // 修复后重新刷新适配器
-                    inboundListAdapter.notifyDataSetChanged()
-                    
-                    // 打印现有列表中的每个商品信息
-                    inboundItems.forEachIndexed { index, item ->
-                        Log.d("InboundActivity", "商品[$index]: sku=${item.sku}, location=${item.location}, color=${item.color}, size=${item.size}, quantity=${item.quantity}")
-                    }
-                    
-                    // 使用完整条码作为最终SKU，确保一致性
-                    val finalProductCode = productCode  // 保持完整条码：129092-黄色-XXL
-                    
-                    // 🎯 修复重复检查：支持简单条码和完整条码的匹配
-                    val existingIndex = inboundItems.indexOfFirst { item ->
-                        // 🔧 智能SKU比较：支持简单条码匹配完整SKU
-                        val skuMatch = if (productCode.contains("-")) {
-                            // 扫描的是完整条码，直接比较
-                            item.sku == productCode
-                        } else {
-                            // 扫描的是简单条码，需要匹配相同商品编码、颜色、尺码
-                            val itemParts = item.sku.split("-")
-                            if (itemParts.size >= 3) {
-                                val itemProductCode = itemParts[0]
-                                itemProductCode == productCode && 
-                                item.color == defaultColor && 
-                                item.size == defaultSize
-                            } else {
-                                item.sku == productCode
-                            }
-                        }
-                        
-                        // 标准化货位比较：空字符串和"无货位"视为相同
-                        val normalizedItemLocation = if (item.location.isEmpty()) "无货位" else item.location
-                        val normalizedSelectedLocation = if (selectedLocation.isEmpty()) "无货位" else selectedLocation
-                        val locationMatch = normalizedItemLocation == normalizedSelectedLocation
-                        
-                        Log.d("InboundActivity", "🔍 比较商品: SKU匹配=$skuMatch, 货位匹配=$locationMatch")
-                        Log.d("InboundActivity", "商品SKU: [${item.sku}] vs 扫描码: [$productCode]")
-                        Log.d("InboundActivity", "商品货位: [${item.location}] -> [$normalizedItemLocation] vs 选择货位: [$selectedLocation] -> [$normalizedSelectedLocation]")
-                        Log.d("InboundActivity", "商品颜色: [${item.color}] vs 默认颜色: [$defaultColor]")
-                        Log.d("InboundActivity", "商品尺码: [${item.size}] vs 默认尺码: [$defaultSize]")
-                        
-                        skuMatch && locationMatch
-                    }
-                    
-                    Log.d("InboundActivity", "existingIndex = $existingIndex")
-                    
-                    if (existingIndex >= 0) {
-                        // 如果已存在相同商品+货位，增加数量
-                        val existingItem = inboundItems[existingIndex]
-                        Log.d("InboundActivity", "找到重复商品，准备累加：原数量=${existingItem.quantity}")
-                        
-                        val newQuantity = existingItem.quantity + 1
-                        // 创建标准化的SKU格式
-                        val updatedSku = if (productCode.contains("-")) {
-                            productCode  // 如果已经是完整格式，直接使用
-                        } else {
-                            "$productCode-$defaultColor-$defaultSize"  // 创建完整格式
-                        }
-                        
-                        inboundItems[existingIndex] = existingItem.copy(
-                            quantity = newQuantity,
-                            sku = updatedSku, // 使用标准化的SKU
-                            color = defaultColor, // 更新颜色
-                            size = defaultSize   // 更新尺码
-                        )
-                        
-                        // 强制刷新整个列表和界面
-                        inboundListAdapter.notifyItemChanged(existingIndex)
-                        inboundListAdapter.notifyDataSetChanged()  // 强制全部刷新
-                        
-                        Log.d("InboundActivity", "累加完成：新数量=$newQuantity")
-                        Log.d("InboundActivity", "界面刷新完成")
-                        
-                        // 📝 累加成功，更新防重复记录（防止短时间内重复累加）
-                        lastScanTime = currentTime
-                        lastScanCode = productCode
-                        Log.d("InboundActivity", "🔒 更新防重复记录（累加）: $productCode")
-                        
-                        Toast.makeText(this@InboundActivity, "✅ 累加成功！数量: $newQuantity", Toast.LENGTH_LONG).show()
-                        updateItemCount()
-                        editProductCode.setText("")
-                        editProductCode.requestFocus()
-                        scanQueue.remove(productCode)
-                        return@runOnUiThread
-                    }
-                    
-                    // 添加新商品到列表 - 创建标准化的SKU格式
-                    val standardizedSku = if (productCode.contains("-")) {
-                        productCode  // 如果已经是完整格式，直接使用
-                    } else {
-                        "$productCode-$defaultColor-$defaultSize"  // 创建完整格式
-                    }
-                    
-                    val newItem = InboundItem(
-                        sku = standardizedSku,
-                        product_name = productName,
-                        location = selectedLocation,
-                        quantity = 1,
-                        color = defaultColor,
-                        size = defaultSize,
-                        image_url = imageUrl,
-                        productData = productData
-                    )
-                    inboundItems.add(newItem)
-                    inboundListAdapter.notifyItemInserted(inboundItems.size - 1)
-                    updateItemCount()
-                    
-                    // 📝 新增商品成功，不更新防重复记录（允许再次扫描添加相同条码的不同规格）
-                    Log.d("InboundActivity", "✅ 新增商品成功，不设置防重复（允许不同规格）: $productCode")
-                    
-                    editProductCode.setText("")
-                    editProductCode.requestFocus()
-                    scanQueue.remove(productCode)
-                    
-                    val message = if (productData != null) {
-                        if (productData.colors != null && productData.colors.size > 1) {
-                            "✅ 已添加商品，可点击选择颜色/尺码 (共${productData.colors.size}种颜色)"
-                        } else {
-                            "✅ 已添加商品到入库清单"
-                        }
-                    } else {
-                        "✅ 已添加商品到入库清单（未找到商品信息）"
-                    }
-                    Toast.makeText(this@InboundActivity, message, Toast.LENGTH_LONG).show()
-                }
-            } catch (e: Exception) {
-                Log.e("InboundActivity", "查询商品失败: ${e.message}")
-                runOnUiThread {
-                    // 🔒 API完全失败时，必须使用本地解析结果，不允许使用"默认颜色"
-                    val localParsedInfo = parseProductCodeLocally(productCode)
-                    if (localParsedInfo == null) {
-                        // 如果本地解析也失败，直接提示错误，不创建商品
-                        Toast.makeText(this@InboundActivity, "条码格式错误：$productCode，请确认条码格式为 商品编码-颜色-尺码", Toast.LENGTH_LONG).show()
-                        editProductCode.setText("")
-                        editProductCode.requestFocus()
-                        scanQueue.remove(productCode)
-                        return@runOnUiThread
-                    }
-                    
-                    // 🔒 强制使用本地解析结果，绝对不允许"默认颜色"
-                    val finalColor = localParsedInfo.color
-                    val finalSize = localParsedInfo.size
-                    
-                    Log.d("InboundActivity", "🛠️ API失败，使用最终解析结果: 颜色=$finalColor, 尺码=$finalSize")
-                    
-                    // 🔒 使用完整的条码作为SKU，保持一致性
-                    val finalSku = productCode  // 使用完整条码：129092-黄色-XXL
-                    
-                    Log.d("InboundActivity", "🔍 最终SKU: $finalSku, 颜色: $finalColor, 尺码: $finalSize, 货位: $selectedLocation")
-                    
-                    // 检查是否已存在相同商品
-                    val existingIndex = inboundItems.indexOfFirst { item ->
-                        item.sku == finalSku && 
-                        item.location == selectedLocation &&
-                        item.color == finalColor &&
-                        item.size == finalSize
-                    }
-                    
-                    if (existingIndex >= 0) {
-                        // 如果已存在相同商品，增加数量
-                        val existingItem = inboundItems[existingIndex]
-                        val newQuantity = existingItem.quantity + 1
-                        inboundItems[existingIndex] = existingItem.copy(quantity = newQuantity)
-                        inboundListAdapter.notifyItemChanged(existingIndex)
-                        Log.d("InboundActivity", "✅ 累加商品数量: SKU=$finalSku, 原数量=${existingItem.quantity}, 新数量=$newQuantity")
-                        
-                        // 📝 累加成功，更新防重复记录（防止短时间内重复累加）
-                        lastScanTime = currentTime
-                        lastScanCode = productCode
-                        Log.d("InboundActivity", "🔒 更新防重复记录（累加）: $productCode")
-                        
-                        Toast.makeText(this@InboundActivity, "已增加商品数量: $newQuantity", Toast.LENGTH_SHORT).show()
-                        updateItemCount()
-                        editProductCode.setText("")
-                        editProductCode.requestFocus()
-                        scanQueue.remove(productCode)
-                        return@runOnUiThread
-                    }
-                    
-                    val newItem = InboundItem(
-                        sku = finalSku,
-                        product_name = localParsedInfo.productCode,
-                        location = selectedLocation,
-                        quantity = 1,
-                        color = finalColor,
-                        size = finalSize,
-                        image_url = "",
-                        productData = null  // 移除不存在的toProduct()调用
-                    )
-                    inboundItems.add(newItem)
-                    inboundListAdapter.notifyItemInserted(inboundItems.size - 1)
-                    updateItemCount()
-                    
-                    // 📝 新增商品成功，不更新防重复记录（允许再次扫描添加相同条码的不同规格）
-                    Log.d("InboundActivity", "✅ 新增商品成功，不设置防重复（允许不同规格）: $productCode")
-                    
-                    editProductCode.setText("")
-                    editProductCode.requestFocus()
-                    scanQueue.remove(productCode)
-                    Toast.makeText(this@InboundActivity, "已添加商品到入库清单（使用本地解析：$finalColor-$finalSize）", Toast.LENGTH_SHORT).show()
-                }
-            }
+            processScannedCode(productCode)
         }
+    }
+
+    // This is the new, definitive method for processing codes
+    private suspend fun processScannedCode(scannedCode: String) {
+        // 1. Extract base product code for a guaranteed API call
+        val baseProductCode = scannedCode.split("-").firstOrNull() ?: scannedCode
+        
+        val product: Product? = try {
+            val response = ApiClient.getApiService().getProductByCode(baseProductCode)
+            if (response.isSuccessful && response.body()?.success == true) {
+                response.body()?.data
+            } else {
+                Toast.makeText(this, "API查询失败: ${response.body()?.error_message}", Toast.LENGTH_SHORT).show()
+                null
+            }
+        } catch (e: Exception) {
+            Log.e("InboundActivity", "API异常 for $baseProductCode", e)
+            Toast.makeText(this, "网络或API错误: ${e.message}", Toast.LENGTH_SHORT).show()
+            null
+        }
+
+        if (product == null) {
+            Toast.makeText(this, "无法获取商品[$baseProductCode]的详细信息", Toast.LENGTH_LONG).show()
+            return
+        }
+        
+        // At this point, `product` contains all color/size/SKU info.
+        // We now determine the EXACT SKU the user wants.
+        val localParsedInfo = parseProductCodeLocally(scannedCode)
+        val targetColor = localParsedInfo?.color ?: product.colors?.firstOrNull()?.color ?: "N/A"
+        val targetSize = localParsedInfo?.size ?: product.colors?.firstOrNull()?.sizes?.firstOrNull()?.sku_size ?: "N/A"
+
+        val targetSkuInfo = product.colors?.asSequence()
+            ?.flatMap { it.sizes ?: emptyList() }
+            ?.find { it.sku_color == targetColor && it.sku_size == targetSize }
+
+        val finalSkuCode = targetSkuInfo?.sku_code ?: scannedCode // Fallback to original code if specific SKU not found
+
+        val location = editLocationInput.text.toString().trim().ifEmpty { "无货位" }
+
+        // 4. Strict uniqueness check (Full SKU + Location)
+        val existingItemIndex = inboundItems.indexOfFirst { it.sku == finalSkuCode && it.location == location }
+
+        if (existingItemIndex != -1) {
+            // Item exists, just increment quantity
+            val existingItem = inboundItems[existingItemIndex]
+            existingItem.quantity++
+            inboundListAdapter.notifyItemChanged(existingItemIndex) // This will re-bind and update stock info too
+            Toast.makeText(this, "数量已累加: ${existingItem.sku} - ${existingItem.quantity}", Toast.LENGTH_SHORT).show()
+        } else {
+            // Item does not exist, add a new one
+            val newItem = InboundItem(
+                sku = finalSkuCode,
+                product_name = product.product_name,
+                location = location,
+                quantity = 1,
+                color = targetColor,
+                size = targetSize,
+                image_url = getBestImageUrl(product, finalSkuCode, targetColor, this),
+                productData = product // CRUCIAL: Attach the full product data object here
+            )
+            
+            // Set SKU options in adapter BEFORE adding
+            inboundListAdapter.setProductSkuOptions(baseProductCode, product.colors, product.skus)
+            
+            inboundItems.add(0, newItem)
+            inboundListAdapter.notifyItemInserted(0)
+            recyclerInboundList.scrollToPosition(0)
+            Toast.makeText(this, "已添加新商品: $finalSkuCode", Toast.LENGTH_SHORT).show()
+        }
+
+        editProductCode.text.clear()
+        updateItemCount()
     }
 
     private fun removeItemAt(position: Int) {
@@ -1533,6 +1114,23 @@ class InboundActivity : AppCompatActivity() {
 
             for (item in inboundItems) {
                 try {
+                    // 智能备注：在备注中加入执行操作前的库存状态，用于调试
+                    var preInboundSkuTotalQty = 0
+                    var preInboundLocationQty = 0
+                    item.productData?.let { product ->
+                        val targetSkuInfo = product.colors?.asSequence()
+                            ?.flatMap { it.sizes ?: emptyList() }
+                            ?.find { it.sku_code == item.sku }
+                        
+                        if (targetSkuInfo != null) {
+                            preInboundSkuTotalQty = targetSkuInfo.sku_total_quantity ?: 0
+                            preInboundLocationQty = targetSkuInfo.locations
+                                ?.find { it.location_code == item.location }
+                                ?.stock_quantity ?: 0
+                        }
+                    }
+                    val debugNotes = "PDA入库 | S-Qty:${preInboundSkuTotalQty}, L-Qty:${preInboundLocationQty}"
+
                     val request = InboundRequest(
                         sku_code = item.sku,
                         location_code = item.location,
@@ -1540,7 +1138,7 @@ class InboundActivity : AppCompatActivity() {
                         operator_id = userId,
                         batch_number = if (item.batch.isNotEmpty()) item.batch else null,
                         is_urgent = false,
-                        notes = "PDA入库 - ${item.color} ${item.size}"
+                        notes = debugNotes // 使用带有库存状态的备注
                     )
 
                     Log.d("InboundActivity", "发送入库请求: ${Gson().toJson(request)}")
@@ -1658,56 +1256,6 @@ class InboundActivity : AppCompatActivity() {
         } else {
             val baseUrl = ApiClient.getServerUrl(context)
             (baseUrl.trimEnd('/') + "/" + imagePath.trimStart('/'))
-        }
-    }
-
-    private suspend fun processScannedCode(productCode: String) {
-        val codeToSearch = productCode.split("-").firstOrNull() ?: productCode
-        try {
-            val response = ApiClient.getApiService().getProductByCode(codeToSearch)
-            if (response.isSuccessful) {
-                val apiResponse = response.body()
-                if (apiResponse?.success == true && apiResponse.data != null) {
-                    // API现在返回单个Product对象，不是ProductListResponse
-                    val product = apiResponse.data
-                    
-                    val parsedInfo = parseProductCodeLocally(productCode)
-                    val color = parsedInfo?.color ?: product.colors?.firstOrNull()?.color ?: "N/A"
-                    val size = parsedInfo?.size ?: "N/A"
-                    val location = editLocationInput.text.toString().ifEmpty { "无货位" }
-
-                    val existingItem = inboundItems.find { it.sku == productCode && it.location == location }
-                    if (existingItem != null) {
-                        existingItem.quantity++
-                        // 更新图片URL
-                        existingItem.image_url = getBestImageUrl(product, existingItem.sku, existingItem.color, this)
-                        inboundListAdapter.notifyDataSetChanged()
-                    } else {
-                        val newItem = InboundItem(
-                            sku = productCode,
-                            product_name = product.product_name,
-                            location = location,
-                            quantity = 1,
-                            color = color,
-                            size = size,
-                            image_url = getBestImageUrl(product, productCode, color, this),
-                            productData = product
-                        )
-                        inboundItems.add(0, newItem)
-                        inboundListAdapter.notifyItemInserted(0)
-                        recyclerInboundList.scrollToPosition(0)
-                    }
-                    editProductCode.text.clear()
-                    updateItemCount()
-                } else {
-                    Toast.makeText(this, "API失败: ${apiResponse?.error_message}", Toast.LENGTH_SHORT).show()
-                }
-            } else {
-                 Toast.makeText(this, "网络错误: ${response.code()}", Toast.LENGTH_SHORT).show()
-            }
-        } catch (e: Exception) {
-            Log.e("InboundActivity", "处理条码时发生异常", e)
-            Toast.makeText(this, "代码异常: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 } 
