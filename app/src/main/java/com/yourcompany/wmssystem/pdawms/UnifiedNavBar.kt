@@ -124,6 +124,7 @@ class UnifiedNavBar(
         // 清除当前Activity的回退栈，避免返回时重复跳转
         intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         activity.startActivity(intent)
+        activity.overridePendingTransition(0, 0) // 禁用Activity切换动画
     }
     
     companion object {

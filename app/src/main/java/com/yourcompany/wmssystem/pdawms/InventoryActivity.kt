@@ -73,13 +73,13 @@ class ColorImageAdapter(
 ) : RecyclerView.Adapter<ColorImageAdapter.ViewHolder>() {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val imgColor: ImageView = view.findViewById(R.id.imgSku) // Reusing the ID from item_inventory_sku_image
-        val txtColorStock: TextView = view.findViewById(R.id.txtSkuStock) // Reusing the ID
+        val imgColor: ImageView = view.findViewById(R.id.imgSku)
+        val txtColorStock: TextView = view.findViewById(R.id.txtSkuStock)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_inventory_sku_image, parent, false) // Reusing the layout
+            .inflate(R.layout.item_inventory_sku_image, parent, false)
         return ViewHolder(view)
     }
 
@@ -94,8 +94,7 @@ class ColorImageAdapter(
             .error(R.drawable.ic_launcher_background)
             .into(holder.imgColor)
 
-        // Set itemView to not be clickable to avoid intercepting card clicks
-        holder.itemView.isClickable = false
+        // No need to manage click listeners here anymore
     }
 
     override fun getItemCount(): Int = items.size
@@ -138,7 +137,9 @@ class InventoryAdapter(
             product.total_location_count ?: 0
         )
 
-        val colorsWithImages = product.colors?.filter { !it.image_path.isNullOrEmpty() } ?: emptyList()
+        val colorsWithImages = product.colors
+            ?.filter { !it.image_path.isNullOrEmpty() }
+            ?.sortedByDescending { it.color_total_quantity ?: 0 } ?: emptyList()
 
         if (colorsWithImages.isNotEmpty()) {
             holder.recyclerSkuImages.visibility = View.VISIBLE
