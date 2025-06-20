@@ -242,6 +242,7 @@ class ScanActivity : AppCompatActivity() {
                 if (response.isSuccessful) {
                     val apiResponse = response.body()
                     if (apiResponse?.success == true && apiResponse.data != null) {
+                        // API现在返回单个Product对象，不是ProductListResponse
                         val product = apiResponse.data
                         val productName = product.product_name
                         val matchedSku = product.matched_sku
@@ -281,6 +282,7 @@ class ScanActivity : AppCompatActivity() {
                 if (response.isSuccessful) {
                     val apiResponse = response.body()
                     if (apiResponse?.success == true && apiResponse.data != null) {
+                        // API现在返回单个Product对象，不是ProductListResponse
                         val product = apiResponse.data
                         val matchedSku = product.matched_sku
                         

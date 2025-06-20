@@ -420,9 +420,23 @@ class OutboundActivity : AppCompatActivity() {
         // 添加统一导航栏
         val navBarContainer = findViewById<LinearLayout>(R.id.navBarContainer)
         UnifiedNavBar.addToActivity(this, navBarContainer, "outbound")
-        
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        Log.d("WMS_OUTBOUND", "📤 出库页面恢复，注册扫码接收器")
         // 注册扫码广播接收器
         setupScanReceiver()
+    }
+    
+    override fun onPause() {
+        super.onPause()
+        Log.d("WMS_OUTBOUND", "📤 出库页面暂停，注销扫码接收器")
+        try {
+            unregisterReceiver(scanReceiver)
+        } catch (e: Exception) {
+            Log.e("WMS_OUTBOUND", "注销扫码接收器失败: ${e.message}")
+        }
     }
     
     private fun initViews() {
@@ -580,7 +594,9 @@ class OutboundActivity : AppCompatActivity() {
                         if (productResponse.isSuccessful) {
                             val productApiResponse = productResponse.body()
                             if (productApiResponse?.success == true && productApiResponse.data != null) {
-                                Log.d("WMS_OUTBOUND", "✅ 商品查询成功: ${productApiResponse.data.product_name}")
+                                // API现在返回单个Product对象，不是ProductListResponse
+                                val productData = productApiResponse.data
+                                Log.d("WMS_OUTBOUND", "✅ 商品查询成功: ${productData.product_name}")
                                 
                                 // 2️⃣ 查询该商品的库存分布
                                 try {
@@ -594,9 +610,9 @@ class OutboundActivity : AppCompatActivity() {
                                     if (inventoryResponse.isSuccessful) {
                                         val inventoryApiResponse = inventoryResponse.body()
                                         if (inventoryApiResponse?.success == true && inventoryApiResponse.data?.isNotEmpty() == true) {
-                                            val productData = inventoryApiResponse.data.first()
-                                            Log.d("WMS_OUTBOUND", "✅ 库存查询成功，找到 ${productData.colors?.size ?: 0} 种颜色")
-                                            handleProductDataWithTargetSku(productData, productCode)
+                                            val inventoryProductData = inventoryApiResponse.data.first()
+                                            Log.d("WMS_OUTBOUND", "✅ 库存查询成功，找到 ${inventoryProductData.colors?.size ?: 0} 种颜色")
+                                            handleProductDataWithTargetSku(inventoryProductData, productCode)
                                             editProductCode.setText("")
                                             return@launch
                                         }
@@ -606,7 +622,7 @@ class OutboundActivity : AppCompatActivity() {
                                 }
                                 
                                 // 3️⃣ 如果库存查询失败，直接使用商品数据
-                                handleProductData(productApiResponse.data)
+                                handleProductData(productData)
                                 editProductCode.setText("")
                                 return@launch
                             }
@@ -665,8 +681,10 @@ class OutboundActivity : AppCompatActivity() {
                         if (productResponse.isSuccessful) {
                             val productApiResponse = productResponse.body()
                             if (productApiResponse?.success == true && productApiResponse.data != null) {
-                                Log.d("WMS_OUTBOUND", "✅ 商品外部条码查询成功: ${productApiResponse.data.product_name}")
-                                handleProductData(productApiResponse.data)
+                                // API现在返回单个Product对象，不是ProductListResponse
+                                val productData = productApiResponse.data
+                                Log.d("WMS_OUTBOUND", "✅ 商品外部条码查询成功: ${productData.product_name}")
+                                handleProductData(productData)
                                 editProductCode.setText("")
                                 return@launch
                             }
@@ -1202,7 +1220,7 @@ class OutboundActivity : AppCompatActivity() {
                     OutboundRequest(
                         sku_code = item.sku,  // 主要字段
                         location_code = if (item.location == "无货位") null else item.location,  // 无货位时传null
-                        stock_quantity = item.quantity,  // 更新字段名
+                        outbound_quantity = item.quantity,  // 修复字段名
                         operator_id = userId,  // 必需字段
                         batch_number = if (item.batch.isNotEmpty()) item.batch else null,
                         is_urgent = false,

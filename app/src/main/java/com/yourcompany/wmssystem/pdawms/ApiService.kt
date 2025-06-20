@@ -41,7 +41,7 @@ interface ApiService {
     
     // 入库操作
     @POST("api/inbound")
-    suspend fun inbound(@Body request: InboundRequest): Response<ApiResponse<Any>>
+    suspend fun inbound(@Body request: InboundRequest): Response<ApiResponse<InboundInventory>>
     
     // 出库操作
     @POST("api/outbound")

@@ -10,11 +10,20 @@ data class ApiResponse<T>(
     @SerializedName("error_message") val error_message: String?
 )
 
+// 商品列表响应 - 匹配实际的API响应结构
+data class ProductListResponse(
+    @SerializedName("products") val products: List<Product>?,
+    @SerializedName("pagination") val pagination: Pagination?
+)
+
 // 分页信息
 data class Pagination(
-    @SerializedName("page") val page: Int,
+    @SerializedName("current_page") val current_page: Int,
     @SerializedName("page_size") val page_size: Int,
-    @SerializedName("total") val total: Int
+    @SerializedName("total_count") val total_count: Int,
+    @SerializedName("total_pages") val total_pages: Int,
+    @SerializedName("has_next_page") val has_next_page: Boolean,
+    @SerializedName("has_prev_page") val has_prev_page: Boolean
 )
 
 // 登录请求
@@ -106,7 +115,7 @@ data class InventoryItem(
 data class InboundRequest(
     @SerializedName("sku_code") val sku_code: String,  // 主要字段
     @SerializedName("location_code") val location_code: String?,  // 可为null
-    @SerializedName("stock_quantity") val stock_quantity: Int,  // 更新字段名
+    @SerializedName("inbound_quantity") val inbound_quantity: Int,  // 修复字段名
     @SerializedName("operator_id") val operator_id: String,  // 必需字段
     @SerializedName("batch_number") val batch_number: String?,
     @SerializedName("is_urgent") val is_urgent: Boolean?,
@@ -117,7 +126,7 @@ data class InboundRequest(
 data class OutboundRequest(
     @SerializedName("sku_code") val sku_code: String,  // 主要字段
     @SerializedName("location_code") val location_code: String?,
-    @SerializedName("stock_quantity") val stock_quantity: Int,  // 更新字段名
+    @SerializedName("outbound_quantity") val outbound_quantity: Int,  // 修复字段名
     @SerializedName("operator_id") val operator_id: String,  // 必需字段
     @SerializedName("batch_number") val batch_number: String?,
     @SerializedName("is_urgent") val is_urgent: Boolean?,
