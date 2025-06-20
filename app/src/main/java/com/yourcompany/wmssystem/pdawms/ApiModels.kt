@@ -177,4 +177,17 @@ data class InventoryAdjustResponse(
     @SerializedName("operator_id") val operator_id: String,
     @SerializedName("adjusted_at") val adjusted_at: String,
     @SerializedName("notes") val notes: String?
+)
+
+// 入库响应 - 新增
+data class InboundInventory(
+    @SerializedName("product_code") val product_code: String,
+    @SerializedName("product_name") val product_name: String,
+    @SerializedName("location_code") val location_code: String,
+    @SerializedName("inbound_quantity") val inbound_quantity: Int,
+    @SerializedName("sku_code") val sku_code: String,
+    @SerializedName("sku_color") val sku_color: String,
+    @SerializedName("sku_size") val sku_size: String,
+    @SerializedName("sku_location_quantity") val sku_location_quantity: Int,
+    @SerializedName("sku_total_quantity") val sku_total_quantity: Int
 ) 

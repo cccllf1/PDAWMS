@@ -50,11 +50,6 @@ data class ProductData(
     val pagination: Pagination?
 )
 
-
-
-
-
-
 // 新的入库请求模型
 
 // 新的入库响应模型
@@ -63,18 +58,6 @@ data class InboundResponse(
     val inventory: InboundInventory?,
     val error_code: String?,
     val error_message: String?
-)
-
-data class InboundInventory(
-    val product_code: String,
-    val product_name: String,
-    val location_code: String,
-    val inbound_quantity: Int,
-    val sku_code: String,
-    val sku_color: String,
-    val sku_size: String,
-    val sku_location_quantity: Int,
-    val sku_total_quantity: Int
 )
 
 class InboundListAdapter(
@@ -1133,7 +1116,7 @@ class InboundActivity : AppCompatActivity() {
 
                     val request = InboundRequest(
                         sku_code = item.sku,
-                        location_code = item.location,
+                        location_code = if (item.location == "无货位") null else item.location,
                         inbound_quantity = item.quantity,
                         operator_id = userId,
                         batch_number = if (item.batch.isNotEmpty()) item.batch else null,
