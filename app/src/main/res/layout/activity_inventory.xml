@@ -5,122 +5,80 @@
     android:orientation="vertical"
     android:background="#f5f5f5">
 
-    <!-- 统一导航栏容器 -->
+    <!-- Unified Navigation Bar Container -->
     <LinearLayout
         android:id="@+id/navBarContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical" />
 
-    <!-- 页面内容区域 -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="16dp">
-
-    <!-- 搜索区域 -->
+    <!-- Search Area -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@android:color/white"
-        android:padding="16dp"
-        android:layout_marginTop="16dp">
+        android:background="#ffffff"
+        android:orientation="horizontal"
+        android:padding="8dp">
 
-        <TextView
-            android:layout_width="match_parent"
+        <EditText
+            android:id="@+id/editSearch"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="🔍 搜索商品"
-            android:textSize="16sp"
-            android:textColor="#333333"
-            android:layout_marginBottom="12dp" />
+            android:layout_weight="1"
+            android:hint="@string/inventory_search_hint"
+            android:inputType="text"
+            android:background="@drawable/edit_text_border"
+            android:padding="10dp"/>
 
-        <LinearLayout
-            android:layout_width="match_parent"
+        <Button
+            android:id="@+id/btnSearch"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <EditText
-                android:id="@+id/et_search"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:hint="输入条码或商品名"
-                android:background="#f8f9fa"
-                android:padding="12dp"
-                android:layout_marginEnd="8dp" />
-
-            <Button
-                android:id="@+id/btn_search"
-                android:layout_width="wrap_content"
-                android:layout_height="48dp"
-                android:text="搜索"
-                android:textColor="@android:color/white"
-                android:background="#2196F3"
-                android:paddingHorizontal="24dp" />
-
-        </LinearLayout>
-
+            android:text="@string/inventory_search_button"
+            android:layout_marginStart="8dp"/>
     </LinearLayout>
 
-    <!-- 商品列表 -->
+    <!-- Inventory List Title -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:background="@android:color/white"
-        android:layout_marginTop="16dp">
+        android:layout_height="wrap_content"
+        android:background="#ffffff"
+        android:padding="16dp"
+        android:gravity="center_vertical"
+        android:layout_marginTop="8dp">
 
-        <!-- 状态栏 -->
-        <LinearLayout
-            android:layout_width="match_parent"
+        <TextView
+            android:id="@+id/txtInventoryTitle"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="16dp"
-            android:gravity="center_vertical">
+            android:layout_weight="1"
+            android:text=""
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#2C3E50" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="📦 库存商品列表"
-                android:textSize="16sp"
-                android:textColor="#333333" />
+    </LinearLayout>
+    
+    <!-- Inventory List Container -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
-            <TextView
-                android:id="@+id/txtStatus"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="加载中..."
-                android:textSize="14sp"
-                android:textColor="#666666"
-                android:gravity="end" />
-
-        </LinearLayout>
-
-        <!-- 进度条 -->
-        <ProgressBar
-            android:id="@+id/progressBar"
-            android:layout_width="match_parent"
-            android:layout_height="4dp"
-            android:layout_marginHorizontal="16dp"
-            android:layout_marginBottom="8dp"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:indeterminate="true"
-            android:visibility="gone" />
-
-        <!-- RecyclerView替代ListView -->
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerInventory"
+            android:id="@+id/recyclerInventoryList"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="8dp"
-            android:clipToPadding="false" />
+            android:background="#ffffff"
+            android:padding="8dp" />
 
-    </LinearLayout>
-
-    </LinearLayout>
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone"/>
+            
+    </FrameLayout>
 
 </LinearLayout> 

@@ -122,6 +122,10 @@ class InboundListAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         try {
+            if (position == RecyclerView.NO_POSITION || position >= items.size) {
+                Log.w("InboundAdapter", "onBindViewHolder - 无效的位置: $position")
+                return
+            }
             val item = items[position]
             Log.d("InboundAdapter", "开始绑定数据，位置: $position")
             
@@ -171,19 +175,24 @@ class InboundListAdapter(
                     holder.spinnerColor.setSelection(colorIndex)
                     // 更新item的颜色为当前选择的颜色
                     val selectedColor = skuOptions.colors[colorIndex]
-                    items[holder.adapterPosition] = items[holder.adapterPosition].copy(color = selectedColor)
+                    // 使用 adapterPosition 来安全地更新
+                    val currentPosition = holder.adapterPosition
+                    if (currentPosition != RecyclerView.NO_POSITION) {
+                        items[currentPosition] = items[currentPosition].copy(color = selectedColor)
+                    }
                 }
                 
                 // 颜色选择监听器 - 更新对应的尺码选项
                 holder.spinnerColor.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                    override fun onItemSelected(parent: AdapterView<*>?, view: View?, pos: Int, id: Long) {
+                        val currentPosition = holder.adapterPosition
+                        if (currentPosition == RecyclerView.NO_POSITION || currentPosition >= items.size) {
+                            Log.w("InboundAdapter", "🚨 颜色选择 - 适配器位置无效: $currentPosition")
+                            return
+                        }
                         try {
-                            if (holder.adapterPosition == RecyclerView.NO_POSITION || holder.adapterPosition >= items.size) {
-                                Log.w("InboundAdapter", "🚨 颜色选择 - 适配器位置无效: ${holder.adapterPosition}")
-                                return
-                            }
-                            val selectedColor = skuOptions.colors[position]
-                            val currentItem = items[holder.adapterPosition]
+                            val selectedColor = skuOptions.colors[pos]
+                            val currentItem = items[currentPosition]
 
                             // 1. 立刻用新颜色更新item
                             var updatedItem = currentItem.copy(color = selectedColor)
@@ -213,8 +222,8 @@ class InboundListAdapter(
                             updateProductImage(holder, updatedItem)
 
                             // 6. 保存所有更改
-                            items[holder.adapterPosition] = updatedItem
-                            onItemUpdate(holder.adapterPosition, updatedItem)
+                            items[currentPosition] = updatedItem
+                            onItemUpdate(currentPosition, updatedItem)
                             Log.d("InboundAdapter", "颜色变更为: $selectedColor, 图片已刷新")
 
                         } catch (e: Exception) {
@@ -225,237 +234,148 @@ class InboundListAdapter(
                 }
                 
                 // 设置尺码选择器
-                val currentColor = items[holder.adapterPosition].color
-                val sizesForCurrentColor = skuOptions.colorSizeMap[currentColor] ?: skuOptions.sizes
-                val sizeAdapter = ArrayAdapter(holder.itemView.context, android.R.layout.simple_spinner_item, sizesForCurrentColor)
-                sizeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                holder.spinnerSize.adapter = sizeAdapter
-                
-                // 设置当前选中的尺码，如果没有指定则使用第一个
-                val sizeIndex = if (item.size.isNotEmpty()) {
-                    sizesForCurrentColor.indexOf(item.size)
-                } else {
-                    0  // 使用第一个尺码
-                }
-                
-                if (sizeIndex >= 0 && sizeIndex < sizesForCurrentColor.size) {
-                    holder.spinnerSize.setSelection(sizeIndex)
-                    val selectedSize = sizesForCurrentColor[sizeIndex]
+                val currentPosition = holder.adapterPosition
+                if (currentPosition != RecyclerView.NO_POSITION) {
+                    val currentColor = items[currentPosition].color
+                    val sizesForCurrentColor = skuOptions.colorSizeMap[currentColor] ?: skuOptions.sizes
+                    val sizeAdapter = ArrayAdapter(holder.itemView.context, android.R.layout.simple_spinner_item, sizesForCurrentColor)
+                    sizeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                    holder.spinnerSize.adapter = sizeAdapter
                     
-                    // 获取对应的SKU编码并更新显示
-                    val skuCode = skuOptions.colorSizeSkuMap[currentColor]?.get(selectedSize) ?: item.sku
-                    val updatedItem = items[holder.adapterPosition].copy(
-                        size = selectedSize,
-                        sku = skuCode
-                    )
-                    items[holder.adapterPosition] = updatedItem
-                    holder.txtProductCode.text = "${skuCode} - ${updatedItem.product_name}"
-                    
-                    Log.d("InboundAdapter", "初始设置: 颜色 $currentColor, 尺码 $selectedSize, SKU: $skuCode")
-                }
-                
-                // 尺码选择监听器
-                holder.spinnerSize.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                        // 🚨 超级安全检查：防止所有可能的崩溃
-                        try {
-                            // 检查position有效性
-                            if (position < 0 || position >= sizesForCurrentColor.size) {
-                                Log.w("InboundAdapter", "🚨 尺码选择位置无效: $position, 尺码数量: ${sizesForCurrentColor.size}")
-                                return
-                            }
-                            
-                            // 🔧 安全检查：确保holder.adapterPosition有效
-                            if (holder.adapterPosition == RecyclerView.NO_POSITION || 
-                                holder.adapterPosition >= items.size || 
-                                holder.adapterPosition < 0) {
-                                Log.w("InboundAdapter", "🚨 尺码选择 - 无效的adapter position: ${holder.adapterPosition}, 列表大小: ${items.size}")
-                                return
-                            }
-                            
-                            val selectedSize = sizesForCurrentColor[position]
-                            val currentColor = items[holder.adapterPosition].color
-                            
-                            // 获取对应的SKU编码
-                            val skuCode = skuOptions.colorSizeSkuMap[currentColor]?.get(selectedSize) 
-                                ?: items[holder.adapterPosition].sku
-                            
-                            // 再次检查位置是否仍然有效
-                            if (holder.adapterPosition >= items.size || holder.adapterPosition < 0) {
-                                Log.w("InboundAdapter", "🚨 尺码选择操作中位置变为无效: ${holder.adapterPosition}, 列表大小: ${items.size}")
-                                return
-                            }
-                            
-                            // 更新item数据和显示的商品编码
-                            val updatedItem = items[holder.adapterPosition].copy(
-                                size = selectedSize,
-                                sku = skuCode
-                            )
-                            items[holder.adapterPosition] = updatedItem
-                            holder.txtProductCode.text = "${skuCode} - ${updatedItem.product_name}"
-                            
-                            // 更新商品图片
-                            updateProductImage(holder, updatedItem)
-                            
-                            Log.d("InboundAdapter", "尺码选择: $selectedSize, 颜色: $currentColor, SKU: $skuCode")
-                            onItemUpdate(holder.adapterPosition, updatedItem)
-                        } catch (e: Exception) {
-                            Log.e("InboundAdapter", "🚨 尺码选择器发生异常: ${e.message}", e)
-                        }
+                    // 设置当前选中的尺码，如果没有指定则使用第一个
+                    val sizeIndex = if (item.size.isNotEmpty()) {
+                        sizesForCurrentColor.indexOf(item.size)
+                    } else {
+                        0  // 使用第一个尺码
                     }
                     
-                    override fun onNothingSelected(parent: AdapterView<*>?) {}
+                    if (sizeIndex >= 0 && sizeIndex < sizesForCurrentColor.size) {
+                        holder.spinnerSize.setSelection(sizeIndex)
+                        val selectedSize = sizesForCurrentColor[sizeIndex]
+                        
+                        // 获取对应的SKU编码并更新显示
+                        val skuCode = skuOptions.colorSizeSkuMap[currentColor]?.get(selectedSize) ?: item.sku
+                        val updatedItem = items[currentPosition].copy(
+                            size = selectedSize,
+                            sku = skuCode
+                        )
+                        items[currentPosition] = updatedItem
+                        holder.txtProductCode.text = "${skuCode} - ${updatedItem.product_name}"
+                        
+                        // 更新图片
+                        updateProductImage(holder, updatedItem)
+                        
+                        // 更新库存显示
+                        updateStockInfo(holder, updatedItem)
+                    }
                 }
-                
             } else {
-                // 🔧 如果没有SKU信息，使用商品本身的颜色和尺码，不使用"默认颜色"
-                val itemColors = if (item.color.isNotEmpty()) listOf(item.color) else listOf("未知颜色")
-                val itemSizes = if (item.size.isNotEmpty()) listOf(item.size) else listOf("未知尺码")
-                
-                val colorAdapter = ArrayAdapter(holder.itemView.context, android.R.layout.simple_spinner_item, itemColors)
-                colorAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                holder.spinnerColor.adapter = colorAdapter
-                holder.spinnerColor.setSelection(0)
-                
-                val sizeAdapter = ArrayAdapter(holder.itemView.context, android.R.layout.simple_spinner_item, itemSizes)
-                sizeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                holder.spinnerSize.adapter = sizeAdapter
-                holder.spinnerSize.setSelection(0)
-                
-                Log.d("InboundAdapter", "使用商品本身颜色尺码: 颜色=${item.color}, 尺码=${item.size}")
+                // 如果没有SKU选项，禁用并清空spinner
+                holder.spinnerColor.adapter = null
+                holder.spinnerSize.adapter = null
+                Log.w("InboundAdapter", "位置 $position: 商品 ${item.sku} 没有找到SKU选项，spinner已禁用。")
+            }
+
+            // 尺码选择监听器 - 更新SKU编码和UI
+            holder.spinnerSize.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>?, view: View?, pos: Int, id: Long) {
+                    val currentPosition = holder.adapterPosition
+                    if (currentPosition == RecyclerView.NO_POSITION || skuOptions == null) return
+                    
+                    try {
+                        val currentItem = items[currentPosition]
+                        val selectedColor = currentItem.color
+                        val sizesForColor = skuOptions.colorSizeMap[selectedColor] ?: skuOptions.sizes
+                        if(pos >= sizesForColor.size) return
+                        val selectedSize = sizesForColor[pos]
+
+                        // 如果选择没有变化，则不执行任何操作
+                        if (currentItem.size == selectedSize) {
+                            Log.d("InboundAdapter", "尺码未变更，跳过更新")
+                            return
+                        }
+                        
+                        // 获取对应的SKU编码
+                        val skuCode = skuOptions.colorSizeSkuMap[selectedColor]?.get(selectedSize) ?: currentItem.sku
+                        
+                        val updatedItem = currentItem.copy(size = selectedSize, sku = skuCode)
+                        items[currentPosition] = updatedItem
+                        holder.txtProductCode.text = "${skuCode} - ${updatedItem.product_name}"
+                        
+                        // 更新图片
+                        updateProductImage(holder, updatedItem)
+                        
+                        // 更新库存显示
+                        updateStockInfo(holder, updatedItem)
+                        
+                        // 通知Activity更新
+                        onItemUpdate(currentPosition, updatedItem)
+                        Log.d("InboundAdapter", "尺码变更为: $selectedSize, SKU更新为: $skuCode")
+                        
+                    } catch (e: Exception) {
+                        Log.e("InboundAdapter", "🚨 尺码选择器发生异常: ${e.message}", e)
+                    }
+                }
+                override fun onNothingSelected(parent: AdapterView<*>?) {}
             }
             
-            // 设置货位选择器
-            // 获取货位选项，并添加一个空选项作为默认
-            val currentLocationOptions = getLocationOptions().toMutableList()
-            
-            // 🔧 确保"无货位"在选项列表中
-            if (!currentLocationOptions.contains("无货位")) {
-                currentLocationOptions.add(0, "无货位")  // 添加到第一位
-                Log.d("InboundAdapter", "添加'无货位'到选项列表")
-            }
-            
-            // 如果当前商品的货位不在选项列表中，添加它
-            if (item.location.isNotEmpty() && item.location != "无货位" && !currentLocationOptions.contains(item.location)) {
-                currentLocationOptions.add(item.location)
-                Log.d("InboundAdapter", "添加新货位到选项列表: ${item.location}")
-            }
-            
-            val locationOptionsWithEmpty = listOf("请选择货位") + currentLocationOptions
-            val locationAdapter = ArrayAdapter(holder.itemView.context, android.R.layout.simple_spinner_item, locationOptionsWithEmpty)
+            // 设置库位选择器
+            val locationAdapter = ArrayAdapter(holder.itemView.context, android.R.layout.simple_spinner_item, getLocationOptions())
             locationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
             holder.spinnerLocation.adapter = locationAdapter
-            
-            // 设置当前选中的货位 - 🔧 修复"无货位"显示问题
-            val locationIndex = if (item.location.isNotEmpty()) {
-                if (item.location == "无货位") {
-                    // 如果是"无货位"，也要在选项中查找并选择
-                    val index = currentLocationOptions.indexOf("无货位")
-                    if (index >= 0) index + 1 else 0  // +1 因为前面添加了"请选择货位"
-                } else {
-                    // 其他具体货位
-                    val index = currentLocationOptions.indexOf(item.location)
-                    if (index >= 0) index + 1 else 0  // +1 因为前面添加了"请选择货位"
-                }
-            } else {
-                0  // 空字符串时选择"请选择货位"
+            val locationPosition = getLocationOptions().indexOf(item.location)
+            if (locationPosition >= 0) {
+                holder.spinnerLocation.setSelection(locationPosition)
             }
             
-            if (locationIndex >= 0 && locationIndex < locationOptionsWithEmpty.size) {
-                holder.spinnerLocation.setSelection(locationIndex)
-                Log.d("InboundAdapter", "设置货位选择: 位置=$locationIndex, 货位=${locationOptionsWithEmpty[locationIndex]}")
-            }
-            
-            // 货位选择监听器
             holder.spinnerLocation.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                    // 🚨 超级安全检查：防止所有可能的崩溃
-                    try {
-                        // 检查position有效性
-                        if (position < 0 || position >= locationOptionsWithEmpty.size) {
-                            Log.w("InboundAdapter", "🚨 货位选择位置无效: $position, 货位数量: ${locationOptionsWithEmpty.size}")
-                            return
+                override fun onItemSelected(parent: AdapterView<*>?, view: View?, pos: Int, id: Long) {
+                    val currentPosition = holder.adapterPosition
+                    if (currentPosition != RecyclerView.NO_POSITION) {
+                        val newLocation = getLocationOptions()[pos]
+                        val currentItem = items[currentPosition]
+                        if(currentItem.location != newLocation) {
+                           val updatedItem = currentItem.copy(location = newLocation)
+                           items[currentPosition] = updatedItem
+                           updateStockInfo(holder, updatedItem)
+                           onItemUpdate(currentPosition, updatedItem)
                         }
-                        
-                        // 🔧 安全检查：确保holder.adapterPosition有效
-                        if (holder.adapterPosition == RecyclerView.NO_POSITION || 
-                            holder.adapterPosition >= items.size || 
-                            holder.adapterPosition < 0) {
-                            Log.w("InboundAdapter", "🚨 货位选择 - 无效的adapter position: ${holder.adapterPosition}, 列表大小: ${items.size}")
-                            return
-                        }
-                        
-                        val selectedLocation = if (position > 0) {
-                            locationOptionsWithEmpty[position]
-                        } else {
-                            "无货位"  // 🔧 如果选择了"请选择货位"，设为"无货位"而不是空字符串
-                        }
-                        
-                        // 再次检查位置是否仍然有效
-                        if (holder.adapterPosition >= items.size || holder.adapterPosition < 0) {
-                            Log.w("InboundAdapter", "🚨 货位选择操作中位置变为无效: ${holder.adapterPosition}, 列表大小: ${items.size}")
-                            return
-                        }
-                        
-                        val updatedItem = items[holder.adapterPosition].copy(location = selectedLocation)
-                        items[holder.adapterPosition] = updatedItem
-                        onItemUpdate(holder.adapterPosition, updatedItem)
-                        
-                        Log.d("InboundAdapter", "货位选择: $selectedLocation")
-                        // Update location stock display when location changes
-                        updateStockDisplay(holder, updatedItem.productData, updatedItem.sku, selectedLocation)
-                    } catch (e: Exception) {
-                        Log.e("InboundAdapter", "🚨 货位选择器发生异常: ${e.message}", e)
                     }
                 }
-                
-                override fun onNothingSelected(parent: AdapterView<*>?) {}
+                override fun onNothingSelected(p0: AdapterView<*>?) {}
             }
             
             // 设置数量
             holder.editQuantity.setText(item.quantity.toString())
-            
-            // 数量变化监听
             holder.editQuantity.addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
                 override fun afterTextChanged(s: Editable?) {
-                    // 🚨 超级安全检查：防止所有可能的崩溃
-                    try {
-                        // 🔧 安全检查：确保holder.adapterPosition有效
-                        if (holder.adapterPosition == RecyclerView.NO_POSITION || 
-                            holder.adapterPosition >= items.size || 
-                            holder.adapterPosition < 0) {
-                            Log.w("InboundAdapter", "🚨 数量变化 - 无效的adapter position: ${holder.adapterPosition}, 列表大小: ${items.size}")
-                            return
-                        }
-                        
-                        val newQuantity = s.toString().toIntOrNull() ?: 1
-                        items[holder.adapterPosition] = items[holder.adapterPosition].copy(quantity = newQuantity)
-                        onItemUpdate(holder.adapterPosition, items[holder.adapterPosition])
-                    } catch (e: Exception) {
-                        Log.e("InboundAdapter", "🚨 数量变化监听器发生异常: ${e.message}", e)
+                    val currentPosition = holder.adapterPosition
+                    if (currentPosition != RecyclerView.NO_POSITION) {
+                        val newQuantity = s.toString().toIntOrNull() ?: 0
+                        items[currentPosition].quantity = newQuantity
+                        onItemUpdate(currentPosition, items[currentPosition])
                     }
                 }
             })
             
-            // 删除按钮
+            // 设置删除按钮
             holder.btnDelete.setOnClickListener {
-                onDeleteClick(position)
+                val currentPosition = holder.adapterPosition
+                if (currentPosition != RecyclerView.NO_POSITION) {
+                    onDeleteClick(currentPosition)
+                }
             }
             
-            // Set hints for the stock fields
-            holder.editSkuTotalStock.hint = "SKU总库存"
-            holder.editLocationStock.hint = "库位库存"
-            holder.editSkuTotalStock.isEnabled = false // Make them read-only
-            holder.editLocationStock.isEnabled = false
+            // 更新库存信息
+            updateStockInfo(holder, item)
             
-            // Update stock information display
-            updateStockDisplay(holder, item.productData, item.sku, item.location)
+            Log.d("InboundAdapter", "完成数据绑定，位置: $position")
             
-            Log.d("InboundAdapter", "数据绑定完成")
         } catch (e: Exception) {
-            Log.e("InboundAdapter", "绑定数据失败: ${e.message}", e)
+            val currentPosition = holder.adapterPosition
+            Log.e("InboundAdapter", "🚨 绑定ViewHolder时发生严重错误, 位置: $currentPosition, 错误: ${e.message}", e)
         }
     }
 
@@ -593,16 +513,19 @@ class InboundListAdapter(
     }
 
     // Helper function moved to the adapter's scope
-    private fun updateStockDisplay(holder: ViewHolder, product: Product?, skuCode: String, locationCode: String) {
+    private fun updateStockInfo(holder: ViewHolder, item: InboundItem) {
         var skuTotal = 0
         var locTotal = 0
-        product?.colors?.asSequence()
-            ?.flatMap { it.sizes ?: emptyList() }
-            ?.find { it.sku_code == skuCode }
-            ?.also { skuInfo ->
-                skuTotal = skuInfo.sku_total_quantity ?: 0
-                locTotal = skuInfo.locations?.find { it.location_code == locationCode }?.stock_quantity ?: 0
+        item.productData?.let { product ->
+            val targetSkuInfo = product.colors?.asSequence()
+                ?.flatMap { it.sizes ?: emptyList() }
+                ?.find { it.sku_code == item.sku }
+            
+            if (targetSkuInfo != null) {
+                skuTotal = targetSkuInfo.sku_total_quantity ?: 0
+                locTotal = targetSkuInfo.locations?.find { it.location_code == item.location }?.stock_quantity ?: 0
             }
+        }
         holder.editSkuTotalStock.setText(skuTotal.toString())
         holder.editLocationStock.setText(locTotal.toString())
     }

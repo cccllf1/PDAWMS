@@ -22,11 +22,21 @@ interface ApiService {
     @GET("api/products/code/{code}")
     suspend fun getProductByCode(@Path("code") code: String): Response<ApiResponse<Product>>
     
+    @GET("api/products/sku/{sku}")
+    suspend fun getProductBySku(@Path("sku") sku: String): Response<ApiResponse<Product>>
+    
     @GET("api/products/external-code/{code}")
     suspend fun getProductByExternalCode(@Path("code") code: String): Response<ApiResponse<Product>>
     
     @GET("api/products/{product_id}")
     suspend fun getProductById(@Path("product_id") product_id: String): Response<ApiResponse<Product>>
+    
+    @GET("api/products")
+    suspend fun searchProducts(
+        @Query("search") query: String?,
+        @Query("page") page: Int = 1,
+        @Query("page_size") page_size: Int = 1000
+    ): Response<ApiResponse<ProductListResponse>>
     
     // 库存查询
     @GET("api/inventory/by-location")

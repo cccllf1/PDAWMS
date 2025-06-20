@@ -32,4 +32,24 @@
     <string name="input_password">请输入密码</string>
     <string name="connection_tip">💡 提示：首次使用请先测试服务器连接</string>
     <string name="version_info">Version 2.1 - Mobile WMS System</string>
+    <string name="inventory_summary_title">库存 (%1$d 个商品 / %2$d 件)</string>
+    <string name="inventory_search_hint">输入商品编码或名称</string>
+    <string name="inventory_search_button">搜索</string>
+    <string name="inventory_list_title">库存清单 (%d)</string>
+    <string name="product_code_label">编码: %s</string>
+    <string name="product_total_stock_label">合计: %d</string>
+    <string name="product_stats_label">SKU: %1$d / 库位: %2$d</string>
+    <string name="sku_details_title">SKU详情</string>
+    <string name="sku_code_label">SKU编码</string>
+    <string name="location_label">所在库位</string>
+    <string name="quantity_label">数量</string>
+    <string name="total_stock_label">总库存</string>
+    <string name="close_button">关闭</string>
+    <string name="inventory_no_results">未找到相关库存信息</string>
+    <string name="inventory_api_error">获取库存失败: %s</string>
+    <string name="inventory_network_error">网络错误: %d</string>
+    <string name="inventory_request_exception">请求异常: %s</string>
+    <string name="product_details_title">商品详情</string>
+    <string name="product_name_label">商品名称</string>
+    <string name="sku_list_header">SKU明细</string>
 </resources>

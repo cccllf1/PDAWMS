@@ -8,6 +8,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
+import com.google.gson.GsonBuilder
 
 object ApiClient {
     // 不再提供默认服务器地址，强制用户设置
@@ -61,10 +62,14 @@ object ApiClient {
             .writeTimeout(30, TimeUnit.SECONDS)
             .build()
         
+        val gson = GsonBuilder()
+            .setLenient()
+            .create()
+
         retrofit = Retrofit.Builder()
             .baseUrl(baseUrl)
             .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
     }
     
@@ -119,5 +124,13 @@ object ApiClient {
     fun getServerUrl(context: Context): String {
         val sharedPrefs = context.getSharedPreferences("wms_prefs", Context.MODE_PRIVATE)
         return sharedPrefs.getString("server_url", "") ?: ""
+    }
+
+    fun processImageUrl(path: String?, context: Context): String {
+        if (path.isNullOrEmpty()) return ""
+        return if (path.startsWith("http")) path else {
+            val serverUrl = getServerUrl(context)
+            serverUrl.trimEnd('/') + "/" + path.trimStart('/')
+        }
     }
 } 
