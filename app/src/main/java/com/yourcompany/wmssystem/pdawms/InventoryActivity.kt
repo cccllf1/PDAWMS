@@ -1,15 +1,19 @@
 package com.yourcompany.wmssystem.pdawms
 
 import android.app.AlertDialog
+import android.app.Dialog
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.Window
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -28,6 +32,19 @@ data class InventoryDisplayItem(
     val size: String,
     val imageUrl: String?,
     val locationStocks: Map<String, Int>
+)
+
+// Data class to hold expansion state for Location items
+data class ExpandableLocation(
+    val location: LocationStock,
+    var isExpanded: Boolean = false
+)
+
+// Data class to hold expansion state for SKU items
+data class ExpandableSkuInfo(
+    val skuInfo: SkuInfo,
+    var isExpanded: Boolean = false,
+    var expandableLocations: List<ExpandableLocation>
 )
 
 // --- Nested Adapter for SKU Images ---
@@ -162,6 +179,158 @@ class InventoryAdapter(
     }
 }
 
+// --- Adapter for SKU details (size, quantity, locations with actions) ---
+class SkuDetailAdapter(
+    private var skuList: MutableList<ExpandableSkuInfo>,
+    private val context: Context,
+    private val onStateChanged: () -> Unit
+) : RecyclerView.Adapter<SkuDetailAdapter.ViewHolder>() {
+
+    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val skuRow: View = view.findViewById(R.id.skuRow)
+        val txtSkuSize: TextView = view.findViewById(R.id.txtSkuSize)
+        val txtSkuQuantity: TextView = view.findViewById(R.id.txtSkuQuantity)
+        val txtSkuLocationCount: TextView = view.findViewById(R.id.txtSkuLocationCount)
+        val imgExpand: ImageView = view.findViewById(R.id.imgExpand)
+        val layoutLocations: LinearLayout = view.findViewById(R.id.layoutLocations)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_sku_location_detail, parent, false)
+        return ViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        val expandableSku = skuList[position]
+        val sku = expandableSku.skuInfo
+
+        holder.txtSkuSize.text = sku.sku_size
+        holder.txtSkuQuantity.text = "${sku.sku_total_quantity ?: 0}件"
+        holder.txtSkuLocationCount.text = "占${sku.locations?.size ?: 0}位"
+
+        holder.skuRow.setOnClickListener {
+            expandableSku.isExpanded = !expandableSku.isExpanded
+            notifyItemChanged(position)
+        }
+
+        if (expandableSku.isExpanded) {
+            holder.imgExpand.rotation = 90f
+            holder.layoutLocations.visibility = View.VISIBLE
+            holder.layoutLocations.removeAllViews()
+
+            expandableSku.expandableLocations.forEach { loc ->
+                val locationView = LayoutInflater.from(context)
+                    .inflate(R.layout.item_location_actions, holder.layoutLocations, false)
+
+                val locationRow = locationView.findViewById<View>(R.id.locationRow)
+                val txtLocationInfo = locationView.findViewById<TextView>(R.id.txtLocationInfo)
+                val txtLocationQuantity = locationView.findViewById<TextView>(R.id.txtLocationQuantity)
+                val actionsLayout = locationView.findViewById<LinearLayout>(R.id.actionsLayout)
+
+                txtLocationInfo.text = "库位: ${loc.location.location_code}"
+                txtLocationQuantity.text = "${loc.location.stock_quantity}件"
+
+                actionsLayout.visibility = if (loc.isExpanded) View.VISIBLE else View.GONE
+
+                locationRow.setOnClickListener {
+                    toggleLocation(loc)
+                }
+
+                locationView.findViewById<Button>(R.id.btnInbound).setOnClickListener {
+                    Toast.makeText(context, "入库到: ${loc.location.location_code}", Toast.LENGTH_SHORT).show()
+                }
+                locationView.findViewById<Button>(R.id.btnOutbound).setOnClickListener {
+                    Toast.makeText(context, "从库位出库: ${loc.location.location_code}", Toast.LENGTH_SHORT).show()
+                }
+                locationView.findViewById<Button>(R.id.btnStocktake).setOnClickListener {
+                    Toast.makeText(context, "盘点库位: ${loc.location.location_code}", Toast.LENGTH_SHORT).show()
+                }
+
+                holder.layoutLocations.addView(locationView)
+            }
+        } else {
+            holder.imgExpand.rotation = 0f
+            holder.layoutLocations.visibility = View.GONE
+        }
+    }
+
+    private fun toggleLocation(clickedLocation: ExpandableLocation) {
+        val currentlyExpanded = clickedLocation.isExpanded
+
+        // First, collapse all locations everywhere
+        skuList.forEach { sku ->
+            sku.expandableLocations.forEach { loc ->
+                loc.isExpanded = false
+            }
+        }
+
+        // Then, expand the clicked one, only if it wasn't already expanded
+        if (!currentlyExpanded) {
+            clickedLocation.isExpanded = true
+        }
+
+        // Tell the parent adapter to redraw everything to reflect the change
+        onStateChanged()
+    }
+
+    override fun getItemCount(): Int = skuList.size
+}
+
+// --- Adapter for Color details ---
+class ProductColorDetailAdapter(
+    private var colorList: MutableList<ColorInfo>,
+    private val context: Context
+) : RecyclerView.Adapter<ProductColorDetailAdapter.ViewHolder>() {
+    
+    // We need to manage the nested adapter's state here
+    private val skuAdapters = mutableMapOf<Int, SkuDetailAdapter>()
+
+    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val imgColor: ImageView = view.findViewById(R.id.imgColor)
+        val txtColorName: TextView = view.findViewById(R.id.txtColorName)
+        val txtColorStock: TextView = view.findViewById(R.id.txtColorStock)
+        val recyclerSkuDetails: RecyclerView = view.findViewById(R.id.recyclerSkuDetails)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_product_color_detail, parent, false)
+        return ViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        val color = colorList[position]
+        
+        holder.txtColorName.text = color.color
+        holder.txtColorStock.text = "总库存: ${color.color_total_quantity ?: 0}"
+
+        val imageUrl = ApiClient.processImageUrl(color.image_path, context)
+        Glide.with(context).load(imageUrl)
+            .placeholder(R.drawable.ic_launcher_background)
+            .error(R.drawable.ic_launcher_background)
+            .into(holder.imgColor)
+
+        val expandableSkus = color.sizes?.map { sku ->
+            ExpandableSkuInfo(
+                skuInfo = sku,
+                isExpanded = false,
+                expandableLocations = sku.locations?.map { ExpandableLocation(it) } ?: emptyList()
+            )
+        }?.toMutableList() ?: mutableListOf()
+
+        holder.recyclerSkuDetails.layoutManager = LinearLayoutManager(context)
+        val skuAdapter = SkuDetailAdapter(expandableSkus, context) {
+            // This is the key: when a location state changes, we must redraw all color cards
+            notifyDataSetChanged()
+        }
+        skuAdapters[position] = skuAdapter
+        holder.recyclerSkuDetails.adapter = skuAdapter
+    }
+
+    override fun getItemCount(): Int = colorList.size
+}
+
 class InventoryActivity : AppCompatActivity() {
 
     private lateinit var editSearch: EditText
@@ -256,8 +425,8 @@ class InventoryActivity : AppCompatActivity() {
 
     private fun setupEventListeners() {
         btnSearch.setOnClickListener {
-            val code = editSearch.text.toString().trim()
-            searchInventory(code)
+            val query = editSearch.text.toString().trim()
+            searchInventory(query)
         }
     }
 
@@ -318,38 +487,31 @@ class InventoryActivity : AppCompatActivity() {
     }
     
     private fun showProductDetails(product: Product) {
-        val details = StringBuilder()
-        details.append(getString(R.string.product_name_label)).append(": ").append(product.product_name).append("\n")
-        details.append(getString(R.string.product_code_label, product.product_code)).append("\n")
-        details.append(getString(R.string.product_total_stock_label, product.product_total_quantity ?: 0)).append("\n\n")
-        details.append("--- ${getString(R.string.sku_list_header)} ---\n\n")
+        val dialog = Dialog(this)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_product_details)
 
-        if (product.skus.isNullOrEmpty()) {
-            details.append("此商品无SKU信息")
-        } else {
-            product.skus.forEach { sku ->
-                details.append(sku.sku_code).append(" (").append(getString(R.string.total_stock_label)).append(": ").append(sku.sku_total_quantity ?: 0).append(")\n")
-                if (sku.locations.isNullOrEmpty()) {
-                    details.append("  - 无具体库位信息\n")
-                } else {
-                    sku.locations.forEach { location ->
-                        details.append("  - ${location.location_code}: ${location.stock_quantity}\n")
-                    }
-                }
-                details.append("\n")
-            }
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+
+        val txtDialogTitle = dialog.findViewById<TextView>(R.id.txtDialogTitle)
+        val btnCloseDialog = dialog.findViewById<ImageButton>(R.id.btnCloseDialog)
+        val btnClose = dialog.findViewById<Button>(R.id.btnClose)
+        val btnReplenish = dialog.findViewById<Button>(R.id.btnReplenish)
+        val recyclerColorDetails = dialog.findViewById<RecyclerView>(R.id.recyclerColorDetails)
+
+        txtDialogTitle.text = "${product.product_code}的SKU款式"
+        
+        val colors = product.colors?.toMutableList() ?: mutableListOf()
+        recyclerColorDetails.layoutManager = LinearLayoutManager(this)
+        recyclerColorDetails.adapter = ProductColorDetailAdapter(colors, this)
+
+        btnCloseDialog.setOnClickListener { dialog.dismiss() }
+        btnClose.setOnClickListener { dialog.dismiss() }
+        btnReplenish.setOnClickListener { 
+            Toast.makeText(this, "此功能正在开发中", Toast.LENGTH_SHORT).show()
         }
 
-        val scrollView = ScrollView(this)
-        val textView = TextView(this)
-        textView.text = details.toString()
-        textView.setPadding(48, 24, 48, 24)
-        scrollView.addView(textView)
-
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.product_details_title))
-            .setView(scrollView)
-            .setPositiveButton(getString(R.string.close_button), null)
-            .show()
+        dialog.show()
     }
 } 
