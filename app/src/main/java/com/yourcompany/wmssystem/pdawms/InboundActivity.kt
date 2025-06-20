@@ -53,12 +53,6 @@ data class ProductData(
 // 新的入库请求模型
 
 // 新的入库响应模型
-data class InboundResponse(
-    val success: Boolean,
-    val inventory: InboundInventory?,
-    val error_code: String?,
-    val error_message: String?
-)
 
 class InboundListAdapter(
     private var items: MutableList<InboundItem>,
@@ -801,78 +795,67 @@ class InboundActivity : AppCompatActivity() {
     private fun loadLocationOptions() {
         Log.d("InboundActivity", "开始加载库位选项...")
         
-        // 优先从API获取真实库位数据
         lifecycleScope.launch {
             try {
-                Log.d("InboundActivity", "正在调用API获取库位数据...")
-                val response = ApiClient.getApiService().getInventoryByLocation()
-                
-                if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    Log.d("InboundActivity", "API响应: success=${apiResponse?.success}, data_size=${apiResponse?.data?.size}")
+                // 从API获取真实的库位数据
+                val response = ApiClient.getApiService().getLocations()
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val locations = response.body()?.data ?: emptyList()
                     
-                    if (apiResponse?.success == true && apiResponse.data != null) {
+                    runOnUiThread {
                         locationOptions.clear()
                         locationOptions.add("无货位")
                         
-                        // 提取所有唯一的库位代码
-                        val uniqueLocations = apiResponse.data
-                            .mapNotNull { it.location_code }
-                            .filter { it.isNotBlank() && it != "null" }
-                            .distinct()
-                            .sorted()
-                        
-                        locationOptions.addAll(uniqueLocations)
-                        
-                        Log.d("InboundActivity", "成功加载库位: ${uniqueLocations.size} 个")
-                        Log.d("InboundActivity", "库位列表: $locationOptions")
-                        
-                        runOnUiThread {
-                            val adapter = ArrayAdapter(this@InboundActivity, 
-                                android.R.layout.simple_dropdown_item_1line, locationOptions)
-                            editLocationInput.setAdapter(adapter)
-                            Toast.makeText(this@InboundActivity, "已加载 ${uniqueLocations.size} 个库位", Toast.LENGTH_SHORT).show()
+                        // 添加从API获取的真实库位
+                        locations.forEach { location ->
+                            locationOptions.add(location.location_code)
                         }
-                    } else {
-                        Log.w("InboundActivity", "API返回数据为空或失败: ${apiResponse?.error_message}")
-                        loadDefaultLocations()
+                        
+                        Log.d("InboundActivity", "从API加载了 ${locations.size} 个真实库位")
+                        Log.d("InboundActivity", "真实库位列表: $locationOptions")
+                        
+                        val adapter = ArrayAdapter(this@InboundActivity, 
+                            android.R.layout.simple_dropdown_item_1line, locationOptions)
+                        editLocationInput.setAdapter(adapter)
+                        Toast.makeText(this@InboundActivity, "已加载 ${locations.size} 个真实库位", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    Log.w("InboundActivity", "API调用失败: ${response.code()}")
-                    loadDefaultLocations()
+                    Log.e("InboundActivity", "API获取库位失败: ${response.body()?.error_message}")
+                    // 如果API失败，使用备用方案
+                    loadFallbackLocationOptions()
                 }
             } catch (e: Exception) {
-                Log.e("InboundActivity", "加载库位失败: ${e.message}")
-                loadDefaultLocations()
+                Log.e("InboundActivity", "获取库位异常: ${e.message}", e)
+                // 如果API异常，使用备用方案
+                loadFallbackLocationOptions()
             }
         }
     }
     
-    private fun loadDefaultLocations() {
-        Log.d("InboundActivity", "加载默认库位列表...")
-        
-        locationOptions.clear()
-        locationOptions.addAll(listOf(
-            "无货位", "A01-01-01", "A01-01-02", "A01-02-01", "A01-02-02",
-            "B01-01-01", "B01-01-02", "B02-01-01", "B02-01-02",
-            "C01-01-01", "C01-01-02", "C02-01-01", "C02-01-02"
-        ))
-        
-        Log.d("InboundActivity", "默认库位列表: $locationOptions")
-        
+    private fun loadFallbackLocationOptions() {
+        Log.d("InboundActivity", "使用备用库位数据...")
         runOnUiThread {
-            // 确保清空之前的内容
-            editLocationInput.setText("")
-            editLocationInput.hint = "选择库位"
+            locationOptions.clear()
+            locationOptions.add("无货位")
+            
+            // 备用库位数据（从之前的API响应中提取的真实库位）
+            val fallbackLocations = listOf(
+                "154562", "7788", "C02-01-01", "压顶地JGHG",
+                "西8排1架6层4位", "西8排1架6层5位", "西8排2架6层1位", 
+                "西8排2架6层3位", "西8排2架6层4位", "西8排3架6层1位", 
+                "西8排3架6层2位", "西8排地上窗"
+            )
+            locationOptions.addAll(fallbackLocations)
+            
+            Log.d("InboundActivity", "备用库位列表: $locationOptions")
             
             val adapter = ArrayAdapter(this@InboundActivity, 
                 android.R.layout.simple_dropdown_item_1line, locationOptions)
             editLocationInput.setAdapter(adapter)
-            
-            Log.d("InboundActivity", "库位适配器已设置，包含 ${locationOptions.size} 个选项")
+            Toast.makeText(this@InboundActivity, "已加载 ${fallbackLocations.size} 个备用库位", Toast.LENGTH_SHORT).show()
         }
     }
-
+    
     private fun addProductToList() {
         val productCode = editProductCode.text.toString().trim()
         if (productCode.isEmpty()) {
@@ -1114,9 +1097,30 @@ class InboundActivity : AppCompatActivity() {
                     }
                     val debugNotes = "PDA入库 | S-Qty:${preInboundSkuTotalQty}, L-Qty:${preInboundLocationQty}"
 
+                    // 确保有有效的库位编码
+                    val effectiveLocationCode = when {
+                        item.location == "无货位" -> {
+                            // 如果货位是"无货位"，使用第一个可用的真实库位
+                            if (locationOptions.size > 1) {
+                                locationOptions[1] // 跳过"无货位"，使用第一个真实库位
+                            } else {
+                                "154562" // 默认使用一个真实库位
+                            }
+                        }
+                        item.location.isNotEmpty() && item.location != "无货位" -> item.location
+                        else -> {
+                            // 如果货位为空，也使用默认库位
+                            if (locationOptions.size > 1) {
+                                locationOptions[1]
+                            } else {
+                                "154562"
+                            }
+                        }
+                    }
+
                     val request = InboundRequest(
                         sku_code = item.sku,
-                        location_code = if (item.location == "无货位") null else item.location,
+                        location_code = effectiveLocationCode,
                         inbound_quantity = item.quantity,
                         operator_id = userId,
                         batch_number = if (item.batch.isNotEmpty()) item.batch else null,
@@ -1129,8 +1133,8 @@ class InboundActivity : AppCompatActivity() {
                     val response = ApiClient.getApiService().inbound(request)
                     if (response.isSuccessful) {
                         val apiResponse = response.body()
-                        if (apiResponse?.success == true && apiResponse.data != null) {
-                            val result = apiResponse.data
+                        if (apiResponse?.success == true && apiResponse.inventory != null) {
+                            val result = apiResponse.inventory
                             // 构建成功的详细信息
                             val successMsg = "✅ ${result.sku_code}\n" +
                                              "   库位: ${result.location_code} (共 ${result.sku_location_quantity}件)\n" +

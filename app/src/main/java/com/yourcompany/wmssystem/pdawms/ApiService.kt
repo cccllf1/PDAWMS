@@ -39,9 +39,23 @@ interface ApiService {
         @Query("code") code: String? = null
     ): Response<ApiResponse<List<Product>>>
     
+    // 库位管理
+    @GET("api/locations")
+    suspend fun getLocations(
+        @Query("page") page: Int = 1,
+        @Query("page_size") page_size: Int = 1000,
+        @Query("search") search: String? = null
+    ): Response<ApiResponse<List<Location>>>
+    
+    @GET("api/locations/{id}")
+    suspend fun getLocationById(@Path("id") id: String): Response<ApiResponse<Location>>
+    
+    @GET("api/locations/code/{location_code}")
+    suspend fun getLocationByCode(@Path("location_code") location_code: String): Response<ApiResponse<Location>>
+    
     // 入库操作
     @POST("api/inbound")
-    suspend fun inbound(@Body request: InboundRequest): Response<ApiResponse<InboundInventory>>
+    suspend fun inbound(@Body request: InboundRequest): Response<InboundResponse>
     
     // 出库操作
     @POST("api/outbound")

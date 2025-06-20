@@ -88,6 +88,22 @@ data class LocationStock(
     @SerializedName("stock_quantity") val stock_quantity: Int
 )
 
+// 库位信息 - 用于库位管理API
+data class Location(
+    @SerializedName("location_id") val location_id: String?,
+    @SerializedName("location_code") val location_code: String,
+    @SerializedName("location_name") val location_name: String?,
+    @SerializedName("category_code_1") val category_code_1: String?,
+    @SerializedName("category_name_1") val category_name_1: String?,
+    @SerializedName("category_code_2") val category_code_2: String?,
+    @SerializedName("category_name_2") val category_name_2: String?,
+    @SerializedName("description") val description: String?,
+    @SerializedName("priority") val priority: Int?,
+    @SerializedName("is_defective") val is_defective: Boolean?,
+    @SerializedName("created_at") val created_at: String?,
+    @SerializedName("updated_at") val updated_at: String?
+)
+
 // 库位信息
 data class LocationInfo(
     @SerializedName("location_id") val location_id: String?,
@@ -177,6 +193,14 @@ data class InventoryAdjustResponse(
     @SerializedName("operator_id") val operator_id: String,
     @SerializedName("adjusted_at") val adjusted_at: String,
     @SerializedName("notes") val notes: String?
+)
+
+// 入库响应 - 新增
+data class InboundResponse(
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("inventory") val inventory: InboundInventory?,
+    @SerializedName("error_code") val error_code: String?,
+    @SerializedName("error_message") val error_message: String?
 )
 
 // 入库响应 - 新增
