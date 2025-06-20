@@ -61,6 +61,8 @@ class ProductDetailsDialogFragment : DialogFragment() {
         }
         
         binding.txtDialogTitle.text = "${product.product_name} (${product.product_code})"
+        val productTotalQty = product.product_total_quantity ?: 0
+        binding.txtProductTotal.text = "总库存: ${productTotalQty}件"
         binding.btnClose.setOnClickListener { dismiss() }
         binding.btnCloseDialog.setOnClickListener { dismiss() }
 
@@ -78,7 +80,8 @@ class ProductDetailsDialogFragment : DialogFragment() {
 
     override fun onStart() {
         super.onStart()
-        dialog?.window?.setLayout((resources.displayMetrics.widthPixels * 0.98).toInt(), ViewGroup.LayoutParams.MATCH_PARENT)
+        // Set dialog to occupy full screen width
+        dialog?.window?.setLayout((resources.displayMetrics.widthPixels * 1.0).toInt(), ViewGroup.LayoutParams.MATCH_PARENT)
     }
 
     override fun onDestroyView() {
@@ -107,6 +110,8 @@ class ProductColorAdapter(
     inner class ViewHolder(private val binding: ItemProductColorDetailBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(color: ColorInfo) {
             binding.txtColorName.text = color.color
+            val totalQty = color.color_total_quantity ?: 0
+            binding.txtColorStock.text = "总库存: ${totalQty}"
 
             // load image
             val url = ApiClient.processImageUrl(color.image_path, context)
