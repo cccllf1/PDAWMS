@@ -158,7 +158,7 @@ data class OutboundRequest(
 data class InventoryAdjustRequest(
     @SerializedName("sku_code") val sku_code: String,  // 主要字段
     @SerializedName("location_code") val location_code: String,
-    @SerializedName("stock_quantity") val stock_quantity: Int,  // 更新字段名
+    @SerializedName("target_quantity") val target_quantity: Int,  // 更新字段名
     @SerializedName("operator_id") val operator_id: String,  // 必需字段
     @SerializedName("batch_number") val batch_number: String?,
     @SerializedName("is_urgent") val is_urgent: Boolean?,

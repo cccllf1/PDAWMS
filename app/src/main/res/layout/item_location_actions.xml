@@ -43,30 +43,30 @@
 
         <Button
             android:id="@+id/btnInbound"
-            style="?android:attr/buttonBarButtonStyle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="入库"
-            android:textColor="@android:color/holo_green_dark" />
+            android:textColor="@android:color/white"
+            android:backgroundTint="@android:color/holo_green_dark" />
 
         <Button
             android:id="@+id/btnOutbound"
-            style="?android:attr/buttonBarButtonStyle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="出库"
-            android:textColor="@android:color/holo_red_light" />
+            android:textColor="@android:color/white"
+            android:backgroundTint="@android:color/holo_red_light" />
 
         <Button
             android:id="@+id/btnStocktake"
-            style="?android:attr/buttonBarButtonStyle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="盘点"
-            android:textColor="@android:color/holo_orange_dark" />
+            android:textColor="@android:color/white"
+            android:backgroundTint="@android:color/holo_orange_dark" />
 
     </LinearLayout>
 </LinearLayout> 

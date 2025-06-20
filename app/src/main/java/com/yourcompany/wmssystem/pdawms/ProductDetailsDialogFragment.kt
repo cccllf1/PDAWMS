@@ -73,11 +73,13 @@ class ProductDetailsDialogFragment : DialogFragment() {
         } else {
             "${product.product_name} (${product.product_code})"
         }
-        binding.txtDialogTitle.text = titleText
         val productTotalQty = product.product_total_quantity ?: 0
-        binding.txtProductTotal.text = "总库存: ${productTotalQty}件"
+        val headerText = "$titleText   总库存: ${productTotalQty}件"
+        binding.txtDialogTitle.text = headerText
+        binding.txtProductTotal.visibility = View.GONE
         binding.btnClose.setOnClickListener { dismiss() }
         binding.btnCloseDialog.setOnClickListener { dismiss() }
+        binding.btnReplenish.setOnClickListener { showReplenishDialog(product) }
 
         viewModel.state.observe(viewLifecycleOwner) { state ->
             colorAdapter.submitList(state.colors.toList())
@@ -152,8 +154,10 @@ class ProductDetailsDialogFragment : DialogFragment() {
                         val inv = resp.body()!!.inventory
                         if (inv != null) {
                             updateQuantities(inv.sku_code, inv.location_code, inv.sku_location_quantity, inv.sku_total_quantity)
+                            showSuccessDialog("入库成功", inv.sku_code, inv.location_code, inv.inbound_quantity, inv.sku_total_quantity)
+                        } else {
+                            Toast.makeText(requireContext(), "入库成功", Toast.LENGTH_SHORT).show()
                         }
-                        Toast.makeText(requireContext(), "入库成功", Toast.LENGTH_SHORT).show()
                     } else {
                         viewModel.setError(resp.body()?.error_message ?: "入库失败")
                     }
@@ -165,8 +169,10 @@ class ProductDetailsDialogFragment : DialogFragment() {
                         val inv = resp.body()!!.inventory
                         if (inv != null) {
                             updateQuantities(inv.sku_code, inv.location_code, inv.sku_location_quantity, inv.sku_total_quantity)
+                            showSuccessDialog("出库成功", inv.sku_code, inv.location_code, inv.outbound_quantity, inv.sku_total_quantity)
+                        } else {
+                            Toast.makeText(requireContext(), "出库成功", Toast.LENGTH_SHORT).show()
                         }
-                        Toast.makeText(requireContext(), "出库成功", Toast.LENGTH_SHORT).show()
                     } else {
                         viewModel.setError(resp.body()?.error_message ?: "出库失败")
                     }
@@ -179,8 +185,8 @@ class ProductDetailsDialogFragment : DialogFragment() {
                         val data = resp.body()!!.data
                         if (data != null) {
                            updateQuantities(data.sku_code, data.location_code, data.current_quantity, data.current_quantity /* total? need re-fetch; using same */)
+                           showSuccessDialog("盘点成功", data.sku_code, data.location_code, qty, data.current_quantity)
                         }
-                        Toast.makeText(requireContext(), "盘点成功", Toast.LENGTH_SHORT).show()
                     } else {
                         viewModel.setError(resp.body()?.error_message ?: "盘点失败")
                     }
@@ -204,7 +210,97 @@ class ProductDetailsDialogFragment : DialogFragment() {
             }?.filterNotNull()
             color.copy(sizes = updatedSizes)
         }
-        viewModel.loadColors(updatedColors)
+        // 重新计算颜色和商品总数
+        val colorsWithTotals = updatedColors.map { color ->
+            val colorTotal = color.sizes?.sumOf { it.sku_total_quantity ?: 0 } ?: 0
+            color.copy(color_total_quantity = colorTotal)
+        }
+        val productTotal = colorsWithTotals.sumOf { it.color_total_quantity ?: 0 }
+        // 更新标题
+        val currentTitle = binding.txtDialogTitle.text.toString()
+        val baseTitle = currentTitle.substringBefore("   总库存")
+        binding.txtDialogTitle.text = "$baseTitle   总库存: ${productTotal}件"
+
+        viewModel.loadColors(colorsWithTotals)
+    }
+
+    private fun showSuccessDialog(title:String, sku:String, loc:String, qty:Int, total:Int){
+        AlertDialog.Builder(requireContext())
+            .setTitle(title)
+            .setMessage("✅ $sku\n库位: $loc (本次 $qty 件)\nSKU总库存: $total 件")
+            .setPositiveButton("确定", null)
+            .show()
+    }
+
+    //endregion
+
+    //region Replenish dialog
+
+    private fun showReplenishDialog(product: Product) {
+        // 找出缺货SKU（总库存<=0）
+        val zeroSkus = product.colors?.flatMap { it.sizes ?: emptyList() }?.filter { (it.sku_total_quantity ?: 0) <= 0 } ?: emptyList()
+        if (zeroSkus.isEmpty()) {
+            Toast.makeText(requireContext(), "没有缺货的SKU", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_replenish_stock, null)
+        val spnSku = dialogView.findViewById<Spinner>(R.id.spnSkuOptions)
+        val autoLoc = dialogView.findViewById<AutoCompleteTextView>(R.id.autoLocation)
+        val edtQty = dialogView.findViewById<EditText>(R.id.edtQuantity)
+
+        val skuCodes = zeroSkus.map { it.sku_code }
+        spnSku.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item, skuCodes)
+
+        // 加载库位列表供自动完成
+        lifecycleScope.launch {
+            try {
+                val locResp = ApiClient.getApiService().getLocations(page_size = 1000)
+                if (locResp.isSuccessful && locResp.body()?.success == true) {
+                    val locCodes = locResp.body()?.data?.map { it.location_code } ?: emptyList()
+                    autoLoc.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, locCodes))
+                }
+            } catch (_: Exception) { }
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("补货入库")
+            .setView(dialogView)
+            .setPositiveButton("确认") { _, _ ->
+                val skuCode = spnSku.selectedItem as String
+                val locationCode = autoLoc.text.toString().trim()
+                val qty = edtQty.text.toString().toIntOrNull() ?: 0
+                if (locationCode.isEmpty() || qty <= 0) {
+                    Toast.makeText(requireContext(), "请输入库位和数量", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                lifecycleScope.launch {
+                    performReplenish(skuCode, locationCode, qty)
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private suspend fun performReplenish(skuCode: String, locationCode: String, qty: Int) {
+        try {
+            val operatorId = ApiClient.getCurrentUserId() ?: "anonymous"
+            val req = InboundRequest(skuCode, locationCode, qty, operatorId, null, false, null)
+            val resp = ApiClient.getApiService().inbound(req)
+            if (resp.isSuccessful && resp.body()?.success == true) {
+                val inv = resp.body()!!.inventory
+                if (inv != null) {
+                    updateQuantities(inv.sku_code, inv.location_code, inv.sku_location_quantity, inv.sku_total_quantity)
+                    showSuccessDialog("补货成功", inv.sku_code, inv.location_code, inv.inbound_quantity, inv.sku_total_quantity)
+                } else {
+                    Toast.makeText(requireContext(), "补货成功", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                viewModel.setError(resp.body()?.error_message ?: "补货失败")
+            }
+        } catch (e: Exception) {
+            viewModel.setError(e.message ?: "网络异常")
+        }
     }
 
     //endregion
@@ -246,7 +342,15 @@ class ProductColorAdapter(
                 layoutManager = LinearLayoutManager(context)
                 adapter = skuAdapter
             }
-            skuAdapter.submitList(color.sizes ?: emptyList())
+            val sortedSizes = color.sizes?.sortedWith(compareBy { sizeSortKey(it.sku_size) }) ?: emptyList()
+            skuAdapter.submitList(sortedSizes)
+        }
+
+        private fun sizeSortKey(size: String?): Int {
+            if (size.isNullOrBlank()) return Int.MAX_VALUE
+            val order = listOf("XS","S","M","L","XL","XXL","3XL","4XL","5XL","6XL")
+            val idx = order.indexOf(size.trim().uppercase())
+            return if (idx >= 0) idx else order.size + size.hashCode()
         }
     }
 }
