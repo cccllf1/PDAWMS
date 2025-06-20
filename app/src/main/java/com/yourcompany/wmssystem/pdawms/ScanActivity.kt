@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
@@ -97,7 +98,7 @@ class ScanActivity : AppCompatActivity() {
         }
         
         btnBind.setOnClickListener {
-            bindSkuWithExternal()
+            bindSkuToExternalCode()
         }
         
         btnClear.setOnClickListener {
@@ -312,42 +313,47 @@ class ScanActivity : AppCompatActivity() {
         }
     }
     
-    private fun bindSkuWithExternal() {
+    private fun bindSkuToExternalCode() {
         val sku = editSku.text.toString().trim()
         val externalCode = editExternalCode.text.toString().trim()
         val skuName = editSkuName.text.toString().trim()
         
-        if (sku.isEmpty()) {
-            Toast.makeText(this, "请输入或扫描SKU", Toast.LENGTH_SHORT).show()
+        if (sku.isEmpty() || externalCode.isEmpty()) {
+            Toast.makeText(this, "请填写SKU和外部条码", Toast.LENGTH_SHORT).show()
             return
         }
         
-        if (externalCode.isEmpty()) {
-            Toast.makeText(this, "请输入或扫描外部条码", Toast.LENGTH_SHORT).show()
+        if (sku == externalCode) {
+            Toast.makeText(this, "SKU和外部条码不能相同", Toast.LENGTH_SHORT).show()
             return
         }
         
-        if (skuName.isEmpty()) {
-            Toast.makeText(this, "请输入商品名称", Toast.LENGTH_SHORT).show()
-            return
-        }
-        
-        // 检查是否已经存在绑定
-        val existingBinding = bindingList.find { it.sku_code == sku || it.external_code == externalCode }
+        // 检查是否已存在相同的绑定
+        val existingBinding = bindingList.find { it.external_code == externalCode }
         if (existingBinding != null) {
-            Toast.makeText(this, "⚠️ SKU或外部条码已存在绑定", Toast.LENGTH_LONG).show()
+            AlertDialog.Builder(this)
+                .setTitle("绑定冲突")
+                .setMessage("外部条码 $externalCode 已绑定到 ${existingBinding.sku_code}，是否要重新绑定到 $sku？")
+                .setPositiveButton("重新绑定") { _, _ ->
+                    performBinding(sku, externalCode, skuName)
+                }
+                .setNegativeButton("取消", null)
+                .show()
             return
         }
         
+        performBinding(sku, externalCode, skuName)
+    }
+    
+    private fun performBinding(sku: String, externalCode: String, skuName: String) {
         showLoading(true)
-        txtResult.text = "正在绑定..."
-        txtResult.setTextColor(Color.parseColor("#2196F3"))
+        txtStatus.text = "绑定中..."
         
         lifecycleScope.launch {
             try {
                 // 使用API添加外部条码绑定
                 val requestBody = mapOf("external_code" to externalCode)
-                val response = ApiClient.getApiService().addSkuExternalCode(sku, requestBody)
+                val response = ApiClient.getApiService().addSkuExternalCode(sku, requestBody)  // 路径参数已更新为snake_case
                 
                 if (response.isSuccessful) {
                     val apiResponse = response.body()

@@ -13,7 +13,7 @@ data class ApiResponse<T>(
 // 分页信息
 data class Pagination(
     @SerializedName("page") val page: Int,
-    @SerializedName("pageSize") val pageSize: Int,
+    @SerializedName("page_size") val page_size: Int,
     @SerializedName("total") val total: Int
 )
 
@@ -32,7 +32,7 @@ data class LoginResponse(
     @SerializedName("is_admin") val is_admin: Boolean
 )
 
-// 商品信息
+// 商品信息 - 更新为新的API结构
 data class Product(
     @SerializedName("product_id") val product_id: String?,
     @SerializedName("product_code") val product_code: String,
@@ -40,7 +40,7 @@ data class Product(
     @SerializedName("unit") val unit: String?,
     @SerializedName("image_path") val image_path: String?,
     @SerializedName("has_sku") val has_sku: Boolean?,
-    @SerializedName("total_quantity") val total_quantity: Int?,
+    @SerializedName("product_total_quantity") val product_total_quantity: Int?,  // 更新字段名
     @SerializedName("sku_count") val sku_count: Int?,
     @SerializedName("location_count") val location_count: Int?,
     @SerializedName("color_count") val color_count: Int?,
@@ -51,24 +51,24 @@ data class Product(
     @SerializedName("updated_at") val updated_at: String?
 )
 
-// SKU信息
+// SKU信息 - 更新为新的API结构
 data class SkuInfo(
     @SerializedName("sku_code") val sku_code: String,
     @SerializedName("sku_color") val sku_color: String?,
     @SerializedName("sku_size") val sku_size: String?,
     @SerializedName("image_path") val image_path: String?,
     @SerializedName("stock_quantity") val stock_quantity: Int?,
-    @SerializedName("total_quantity") val total_quantity: Int?,
+    @SerializedName("sku_total_quantity") val sku_total_quantity: Int?,  // 更新字段名
     @SerializedName("locations") val locations: List<LocationStock>?,
     @SerializedName("external_codes") val external_codes: List<String>?
 )
 
-// 颜色信息
+// 颜色信息 - 更新为新的API结构
 data class ColorInfo(
     @SerializedName("color") val color: String,
     @SerializedName("image_path") val image_path: String?,
     @SerializedName("sizes") val sizes: List<SkuInfo>?,
-    @SerializedName("total_quantity") val total_quantity: Int?,
+    @SerializedName("color_total_quantity") val color_total_quantity: Int?,  // 更新字段名
     @SerializedName("sku_count") val sku_count: Int?,
     @SerializedName("location_count") val location_count: Int?
 )
@@ -87,7 +87,7 @@ data class LocationInfo(
     @SerializedName("items") val items: List<InventoryItem>?
 )
 
-// 库存条目
+// 库存条目 - 更新为新的API结构
 data class InventoryItem(
     @SerializedName("product_id") val product_id: String?,
     @SerializedName("product_code") val product_code: String,
@@ -102,77 +102,65 @@ data class InventoryItem(
     @SerializedName("batch_number") val batch_number: String?
 )
 
-// 入库请求
+// 入库请求 - 更新为新的API结构
 data class InboundRequest(
-    @SerializedName("product_id") val product_id: String?,
-    @SerializedName("product_code") val product_code: String?,
-    @SerializedName("location_id") val location_id: String?,
-    @SerializedName("location_code") val location_code: String?,
-    @SerializedName("sku_code") val sku_code: String?,
-    @SerializedName("stock_quantity") val stock_quantity: Int,
+    @SerializedName("sku_code") val sku_code: String,  // 主要字段
+    @SerializedName("location_code") val location_code: String?,  // 可为null
+    @SerializedName("stock_quantity") val stock_quantity: Int,  // 更新字段名
+    @SerializedName("operator_id") val operator_id: String,  // 必需字段
     @SerializedName("batch_number") val batch_number: String?,
-    @SerializedName("operator_id") val operator_id: String,
     @SerializedName("is_urgent") val is_urgent: Boolean?,
     @SerializedName("notes") val notes: String?
 )
 
-// 出库请求
+// 出库请求 - 更新为新的API结构
 data class OutboundRequest(
-    @SerializedName("product_id") val product_id: String?,
+    @SerializedName("sku_code") val sku_code: String,  // 主要字段
     @SerializedName("location_code") val location_code: String?,
-    @SerializedName("sku_code") val sku_code: String?,
-    @SerializedName("sku_color") val sku_color: String?,
-    @SerializedName("sku_size") val sku_size: String?,
-    @SerializedName("quantity") val quantity: Int,
+    @SerializedName("stock_quantity") val stock_quantity: Int,  // 更新字段名
+    @SerializedName("operator_id") val operator_id: String,  // 必需字段
     @SerializedName("batch_number") val batch_number: String?,
-    @SerializedName("operator_id") val operator_id: String?,
     @SerializedName("is_urgent") val is_urgent: Boolean?,
     @SerializedName("notes") val notes: String?
 )
 
-// 库存调整请求
+// 库存调整请求 - 更新为新的API结构
 data class InventoryAdjustRequest(
-    @SerializedName("product_code") val product_code: String,
+    @SerializedName("sku_code") val sku_code: String,  // 主要字段
     @SerializedName("location_code") val location_code: String,
-    @SerializedName("sku_code") val sku_code: String?,
-    @SerializedName("stock_quantity") val stock_quantity: Int,
+    @SerializedName("stock_quantity") val stock_quantity: Int,  // 更新字段名
+    @SerializedName("operator_id") val operator_id: String,  // 必需字段
     @SerializedName("batch_number") val batch_number: String?,
-    @SerializedName("operator_id") val operator_id: String,
     @SerializedName("is_urgent") val is_urgent: Boolean?,
     @SerializedName("notes") val notes: String?
 )
 
-// 库存转移请求
+// 库存转移请求 - 更新为新的API结构
 data class InventoryTransferRequest(
-    @SerializedName("sku_code") val sku_code: String,
-    @SerializedName("product_id") val product_id: String?,
-    @SerializedName("product_code") val product_code: String?,
-    @SerializedName("from_location_id") val from_location_id: String?,
+    @SerializedName("sku_code") val sku_code: String,  // 主要字段
     @SerializedName("from_location_code") val from_location_code: String?,
-    @SerializedName("to_location_id") val to_location_id: String?,
     @SerializedName("to_location_code") val to_location_code: String?,
-    @SerializedName("stock_quantity") val stock_quantity: Int,
+    @SerializedName("transfer_quantity") val transfer_quantity: Int,  // 更新字段名
+    @SerializedName("operator_id") val operator_id: String,  // 必需字段
     @SerializedName("batch_number") val batch_number: String?,
-    @SerializedName("operator_id") val operator_id: String,
     @SerializedName("is_urgent") val is_urgent: Boolean?,
     @SerializedName("notes") val notes: String?
 )
 
-// 库存转移响应
+// 库存转移响应 - 更新为新的API结构
 data class InventoryTransferResponse(
     @SerializedName("sku_code") val sku_code: String,
-    @SerializedName("from_location") val from_location: String,
-    @SerializedName("to_location") val to_location: String,
-    @SerializedName("stock_quantity") val stock_quantity: Int,
+    @SerializedName("from_location_code") val from_location_code: String,  // 更新字段名
+    @SerializedName("to_location_code") val to_location_code: String,  // 更新字段名
+    @SerializedName("transfer_quantity") val transfer_quantity: Int,  // 更新字段名
     @SerializedName("batch_number") val batch_number: String?,
     @SerializedName("notes") val notes: String?
 )
 
-// 库存调整响应
+// 库存调整响应 - 更新为新的API结构
 data class InventoryAdjustResponse(
     @SerializedName("location_code") val location_code: String,
-    @SerializedName("product_code") val product_code: String,
-    @SerializedName("sku_code") val sku_code: String?,
+    @SerializedName("sku_code") val sku_code: String,
     @SerializedName("previous_quantity") val previous_quantity: Int,
     @SerializedName("adjusted_quantity") val adjusted_quantity: Int,
     @SerializedName("current_quantity") val current_quantity: Int,

@@ -136,7 +136,7 @@ class InventoryActivity : AppCompatActivity() {
         
         lifecycleScope.launch {
             try {
-                val response = ApiClient.getApiService().getInventoryByProduct(page = 1, pageSize = 1000)
+                val response = ApiClient.getApiService().getInventoryByProduct(page = 1, page_size = 1000)
                 if (response.isSuccessful) {
                     val apiResponse = response.body()
                     if (apiResponse?.success == true && apiResponse.data != null) {
@@ -145,7 +145,7 @@ class InventoryActivity : AppCompatActivity() {
                             InventoryDisplayItem(
                                 product_code = product.product_code,
                                 product_name = product.product_name,
-                                total_quantity = product.total_quantity ?: 0,
+                                total_quantity = product.product_total_quantity ?: 0,
                                 location_count = product.location_count ?: 0,
                                 color_count = product.color_count ?: 0,
                                 image_path = product.image_path,
@@ -197,7 +197,7 @@ class InventoryActivity : AppCompatActivity() {
                 // 尝试按商品编码搜索
                 val response = ApiClient.getApiService().getInventoryByProduct(
                     page = 1, 
-                    pageSize = 1000, 
+                    page_size = 1000,
                     code = searchText
                 )
                 
@@ -209,7 +209,7 @@ class InventoryActivity : AppCompatActivity() {
                             InventoryDisplayItem(
                                 product_code = product.product_code,
                                 product_name = product.product_name,
-                                total_quantity = product.total_quantity ?: 0,
+                                total_quantity = product.product_total_quantity ?: 0,
                                 location_count = product.location_count ?: 0,
                                 color_count = product.color_count ?: 0,
                                 image_path = product.image_path,
@@ -260,7 +260,7 @@ class InventoryActivity : AppCompatActivity() {
             if (item.colors.isNotEmpty()) {
                 append("\n颜色明细:\n")
                 item.colors.forEach { color ->
-                    append("- ${color.color}: ${color.total_quantity ?: 0}件\n")
+                    append("- ${color.color}: ${color.color_total_quantity ?: 0}件\n")
                 }
             }
         }

@@ -1,0 +1,2637 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仓库管理系统完整API文档</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .nav {
+            background: white;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .nav h3 {
+            margin-bottom: 1rem;
+            color: #667eea;
+        }
+        
+        .nav-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.5rem;
+        }
+        
+        .nav-links a {
+            color: #666;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+        
+        .nav-links a:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .section {
+            background: white;
+            margin-bottom: 2rem;
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #eee;
+        }
+        
+        .endpoint {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        
+        .endpoint-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .method {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.8rem;
+            margin-right: 1rem;
+        }
+        
+        .method.get { background: #d4edda; color: #155724; }
+        .method.post { background: #cce5ff; color: #0056b3; }
+        .method.put { background: #fff3cd; color: #856404; }
+        .method.delete { background: #f8d7da; color: #721c24; }
+        
+        .endpoint-url {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        
+        .endpoint-description {
+            margin-bottom: 1rem;
+            color: #666;
+        }
+        
+        .params, .response {
+            margin-top: 1rem;
+        }
+        
+        .params h4, .response h4 {
+            margin-bottom: 0.5rem;
+            color: #495057;
+        }
+        
+        .param-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.5rem;
+        }
+        
+        .param-table th,
+        .param-table td {
+            padding: 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .param-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+        
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        
+        .required {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .optional {
+            color: #6c757d;
+        }
+        
+        .base-url {
+            background: #e7f3ff;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 2rem;
+            border-left: 4px solid #667eea;
+        }
+        
+        .note {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .note-title {
+            font-weight: bold;
+            color: #856404;
+            margin-bottom: 0.5rem;
+        }
+
+        .warning {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 5px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .warning-title {
+            font-weight: bold;
+            color: #721c24;
+            margin-bottom: 0.5rem;
+        }
+
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .success-title {
+            font-weight: bold;
+            color: #155724;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏭 仓库管理系统</h1>
+            <p class="subtitle">完整API接口文档 v2.0</p>
+        </header>
+
+        <div class="base-url">
+            <strong>基础 URL:</strong> <code>http://192.168.11.252:8611/api</code><br>
+            <strong>认证方式:</strong> Bearer Token (在请求头中添加 Authorization: Bearer &lt;token&gt;)<br>
+            <strong>命名规范:</strong> 严格使用 snake_case，禁止 camelCase 和缩写
+        </div>
+
+        <div class="nav">
+            <h3>📑 快速导航</h3>
+            <div class="nav-links">
+                <a href="#standards">📋 接口规范</a>
+                <a href="#field-naming">📝 字段标准</a>
+                <a href="#auth">🔐 用户认证</a>
+                <a href="#products">📦 商品管理</a>
+                <a href="#locations">📍 库位管理</a>
+                <a href="#inventory">📊 库存管理</a>
+                <a href="#inbound">📥 入库操作</a>
+                <a href="#outbound">📤 出库操作</a>
+                <a href="#inventory-operations">🔧 库存操作</a>
+                <a href="#external-codes">🔗 外部条码</a>
+                <a href="#upload">🖼️ 文件上传</a>
+            </div>
+        </div>
+
+        <!-- 字段命名规范 -->
+        <div class="endpoint" id="field-naming-convention">
+          <h2>字段命名规范</h2>
+          
+          <h3>多层级数量字段命名</h3>
+          <p>系统中不同层级的数量字段有统一的命名规范：</p>
+          
+          <table border="1" style="border-collapse: collapse; width: 100%; margin: 20px 0;">
+            <thead>
+              <tr style="background-color: #f5f5f5;">
+                <th style="padding: 8px; text-align: left;">字段名</th>
+                <th style="padding: 8px; text-align: left;">层级</th>
+                <th style="padding: 8px; text-align: left;">说明</th>
+                <th style="padding: 8px; text-align: left;">使用场景</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 8px;"><code>sku_location_quantity</code></td>
+                <td style="padding: 8px;">库位层级</td>
+                <td style="padding: 8px;">单个SKU在特定库位的数量</td>
+                <td style="padding: 8px;">库存操作、库位管理</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px;"><code>sku_total_quantity</code></td>
+                <td style="padding: 8px;">SKU层级</td>
+                <td style="padding: 8px;">单个SKU在所有库位的总数量</td>
+                <td style="padding: 8px;">商品管理、库存调整</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px;"><code>color_total_quantity</code></td>
+                <td style="padding: 8px;">颜色层级</td>
+                <td style="padding: 8px;">某颜色下所有尺寸的总数量</td>
+                <td style="padding: 8px;">商品管理、颜色统计</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px;"><code>product_total_quantity</code></td>
+                <td style="padding: 8px;">商品层级</td>
+                <td style="padding: 8px;">整个商品所有SKU的总数量</td>
+                <td style="padding: 8px;">商品列表、总体统计</td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <h3>层级关系图</h3>
+          <pre style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; border-left: 4px solid #007bff;">
+商品(Product) - product_total_quantity
+├── 颜色(Color) - color_total_quantity  
+│   ├── SKU(尺寸) - sku_total_quantity
+│   │   ├── 库位A - sku_location_quantity
+│   │   └── 库位B - sku_location_quantity
+│   └── SKU(尺寸) - sku_total_quantity
+└── 颜色(Color) - color_total_quantity
+    └── ...
+  </pre>
+        </div>
+
+        <!-- 接口规范 -->
+        <div id="standards" class="section">
+            <h2>📋 接口设计规范</h2>
+            
+            <div class="warning">
+                <div class="warning-title">⚠️ 重要规范</div>
+                <ul>
+                    <li><strong>字段命名：</strong>严格使用 snake_case，禁止 camelCase、缩写等其他格式</li>
+                    <li><strong>禁止兜底：</strong>每个字段只能有唯一标准名称，不能用其他字段兜底</li>
+                    <li><strong>必填操作员：</strong>所有修改操作必须传递 operator_id</li>
+                    <li><strong>统一响应：</strong>所有接口返回统一的 JSON 格式</li>
+                </ul>
+            </div>
+
+            <!-- 标准字段名对照表 -->
+            <div id="field-naming" class="endpoint">
+                <h3>📋 标准字段名对照表</h3>
+                <div class="note">
+                    <div class="note-title">重要说明</div>
+                    <p>所有API接口必须严格按照以下标准字段名进行调用，<strong>禁止使用简化字段名或兼容性字段名</strong>。缺少标准字段时必须报错，不能用其他字段代替。</p>
+                </div>
+                
+                <table class="param-table" style="font-size: 0.9rem;">
+                    <thead>
+                        <tr>
+                            <th style="width: 12%;">功能</th>
+                            <th style="width: 25%;">标准字段名</th>
+                            <th style="width: 25%;">禁止使用</th>
+                            <th style="width: 38%;">说明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>商品ID</td><td><code>product_id</code></td><td><code>productId</code></td><td>商品唯一标识</td></tr>
+                        <tr><td>商品编码</td><td><code>product_code</code></td><td><code>productCode</code></td><td>商品业务编码</td></tr>
+                        <tr><td>商品名称</td><td><code>product_name</code></td><td><code>productName</code></td><td>商品展示名称</td></tr>
+                        <tr><td>商品分类</td><td><code>category_id</code></td><td><code>categoryId</code></td><td>分类ID</td></tr>
+                        <tr><td>库位ID</td><td><code>location_id</code></td><td><code>locationId</code></td><td>库位唯一标识</td></tr>
+                        <tr><td>库位编码</td><td><code>location_code</code></td><td><code>locationCode</code></td><td>库位业务编码</td></tr>
+                        <tr><td>库位名称</td><td><code>location_name</code></td><td><code>locationName</code></td><td>库位名称</td></tr>
+                        <tr><td>SKU编码</td><td><code>sku_code</code></td><td><code>skuCode</code></td><td>SKU业务编码</td></tr>
+                        <tr><td>SKU颜色</td><td><code>sku_color</code></td><td><code>skuColor</code></td><td>SKU颜色属性</td></tr>
+                        <tr><td>SKU尺寸</td><td><code>sku_size</code></td><td><code>skuSize</code></td><td>SKU尺寸属性</td></tr>
+                        <tr><td>批次号</td><td><code>batch_number</code></td><td><code>batchNumber</code></td><td>商品批次编号</td></tr>
+                        <tr><td>外部条码</td><td><code>external_code</code></td><td><code>externalCode</code></td><td>单个外部条码</td></tr>
+                        <tr><td>外部条码列表</td><td><code>external_codes</code></td><td><code>externalCodes</code></td><td>外部条码数组</td></tr>
+                        <tr><td>SKU图片</td><td><code>image_path</code></td><td><code>image</code></td><td>SKU图片路径</td></tr>
+                        <tr><td>是否有SKU</td><td><code>has_sku</code></td><td><code>hasSku</code></td><td>是否包含SKU</td></tr>
+                        <tr><td>用户ID</td><td><code>user_id</code></td><td><code>userId</code></td><td>用户唯一标识</td></tr>
+                        <tr><td>用户名</td><td><code>user_name</code></td><td><code>userName</code></td><td>用户登录名</td></tr>
+                        <tr><td>角色</td><td><code>role</code></td><td><code>userRole</code></td><td>用户角色</td></tr>
+                        <tr><td>操作员ID</td><td><code>operator_id</code></td><td><code>operatorId</code>, <code>op_id</code></td><td>记录操作员身份，所有涉及库存调整、转移、入库、出库等操作必须传递</td></tr>
+                        <tr><td>库存数量</td><td><code>stock_quantity</code></td><td><code>quantity</code>, <code>stockQty</code></td><td>整数单位</td></tr>
+                        <tr><td>可用库存</td><td><code>available_quantity</code></td><td><code>avlQty</code></td><td>可销售数量</td></tr>
+                        <tr><td>创建时间</td><td><code>created_at</code></td><td><code>createdAt</code>, <code>createTime</code></td><td>ISO8601格式</td></tr>
+                        <tr><td>更新时间</td><td><code>updated_at</code></td><td><code>updatedAt</code>, <code>updateTime</code></td><td>ISO8601格式</td></tr>
+                        <tr><td>操作时间</td><td><code>operated_at</code></td><td><code>operatedAt</code>, <code>operateTime</code></td><td>ISO8601格式</td></tr>
+                        <tr><td>是否删除</td><td><code>is_deleted</code></td><td><code>deletedFlag</code></td><td>布尔值</td></tr>
+                        <tr><td>是否紧急</td><td><code>is_urgent</code></td><td><code>isUrgent</code>, <code>urgent</code></td><td>布尔值，标记紧急操作</td></tr>
+                        <tr><td>操作备注</td><td><code>notes</code></td><td><code>note</code>, <code>remark</code></td><td>操作说明文本</td></tr>
+                        <tr><td>源库位ID</td><td><code>from_location_id</code></td><td><code>fromLocationId</code></td><td>转移出库位唯一标识</td></tr>
+                        <tr><td>源库位编码</td><td><code>from_location_code</code></td><td><code>fromLocationCode</code></td><td>转移出库位编码</td></tr>
+                        <tr><td>目标库位ID</td><td><code>to_location_id</code></td><td><code>toLocationId</code></td><td>转移入库位唯一标识</td></tr>
+                        <tr><td>目标库位编码</td><td><code>to_location_code</code></td><td><code>toLocationCode</code></td><td>转移入库位编码</td></tr>
+                        <tr><td>商品总库存</td><td><code>total_quantity</code></td><td><code>total_qty</code>, <code>qty</code></td><td>商品下所有SKU的库存合计</td></tr>
+                        <tr style="background-color: #f0f8ff;"><td colspan="4" style="text-align: center; font-weight: bold; color: #0066cc;">多层级数量字段命名</td></tr>
+                        <tr><td>库位层级数量</td><td><code>sku_location_quantity</code></td><td><code>locationQty</code>, <code>loc_qty</code></td><td>单个SKU在特定库位的数量，用于库存操作、库位管理</td></tr>
+                        <tr><td>SKU层级数量</td><td><code>sku_total_quantity</code></td><td><code>skuQty</code>, <code>sku_qty</code></td><td>单个SKU在所有库位的总数量，用于商品管理、库存调整</td></tr>
+                        <tr><td>颜色层级数量</td><td><code>color_total_quantity</code></td><td><code>colorQty</code>, <code>color_qty</code></td><td>某颜色下所有尺寸的总数量，用于商品管理、颜色统计</td></tr>
+                        <tr><td>商品层级数量</td><td><code>product_total_quantity</code></td><td><code>productQty</code>, <code>prod_qty</code></td><td>整个商品所有SKU的总数量，用于商品列表、总体统计</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="note">
+                <div class="note-title">🔍 标准响应格式</div>
+                <div class="code-block">
+{
+  "success": true,
+  "data": { ... },
+  "error_code": null,
+  "error_message": null
+}
+                </div>
+            </div>
+
+            <div class="note">
+                <div class="note-title">📊 总数量字段命名规范</div>
+                <p><strong>为了清晰区分不同层级的总数量，系统使用以下字段命名：</strong></p>
+                <table class="param-table" style="margin-top: 0.5rem;">
+                    <tr><th>字段名</th><th>层级</th><th>说明</th><th>示例值</th></tr>
+                    <tr><td><code>sku_total_quantity</code></td><td>SKU层级</td><td>单个SKU在所有库位的总数量</td><td>120</td></tr>
+                    <tr><td><code>color_total_quantity</code></td><td>颜色层级</td><td>某颜色下所有尺寸的总数量</td><td>350</td></tr>
+                    <tr><td><code>product_total_quantity</code></td><td>商品层级</td><td>整个商品所有SKU的总数量</td><td>800</td></tr>
+                    <tr><td><code>sku_location_quantity</code></td><td>库位层级</td><td>SKU在特定库位的数量</td><td>50</td></tr>
+                </table>
+                <p style="margin-top: 0.5rem;"><strong>层级关系：</strong>商品 → 颜色 → SKU(尺寸) → 库位，数量字段按层级逐级汇总</p>
+            </div>
+
+            <div class="success">
+                <div class="success-title">✅ 通用字段说明</div>
+                <table class="param-table">
+                    <tr>
+                        <th>字段名</th>
+                        <th>类型</th>
+                        <th>必需</th>
+                        <th>说明</th>
+                    </tr>
+                    <tr>
+                        <td>operator_id</td>
+                        <td>string</td>
+                        <td class="required">是</td>
+                        <td>操作人ID，用于追踪谁进行了操作</td>
+                    </tr>
+                    <tr>
+                        <td>is_urgent</td>
+                        <td>boolean</td>
+                        <td class="optional">否</td>
+                        <td>是否紧急操作，默认false。用于标记入库、出库等操作的优先级，便于系统优化处理顺序和数据分析</td>
+                    </tr>
+                    <tr>
+                        <td>notes</td>
+                        <td>string</td>
+                        <td class="optional">否</td>
+                        <td>操作备注说明</td>
+                    </tr>
+                    <tr>
+                        <td>batch_number</td>
+                        <td>string</td>
+                        <td class="optional">否</td>
+                        <td>批次号</td>
+                    </tr>
+                    <tr>
+                        <td>created_at</td>
+                        <td>string</td>
+                        <td class="optional">否</td>
+                        <td>创建时间，ISO8601格式</td>
+                    </tr>
+                    <tr>
+                        <td>updated_at</td>
+                        <td>string</td>
+                        <td class="optional">否</td>
+                        <td>更新时间，ISO8601格式</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- 用户认证 -->
+        <div id="auth" class="section">
+            <h2>🔐 用户认证</h2>
+            
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-url">/auth/login</span>
+                </div>
+                <div class="endpoint-description">用户登录获取访问令牌</div>
+                <div class="params">
+                    <h4>请求参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>user_name</td><td>string</td><td class="required">是</td><td>用户名</td></tr>
+                        <tr><td>password</td><td>string</td><td class="required">是</td><td>密码</td></tr>
+                    </table>
+                </div>
+                <div class="response">
+                    <h4>成功响应:</h4>
+                    <div class="code-block">
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "user_id": "64f7b1c8e4b0c1234567890a",
+      "user_name": "admin",
+      "role": "admin"
+    },
+    "is_admin": true
+  },
+  "error_code": null,
+  "error_message": null
+}
+                    </div>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-url">/auth/register</span>
+                </div>
+                <div class="endpoint-description">注册新用户（需要管理员权限）</div>
+                <div class="params">
+                    <h4>请求参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>user_name</td><td>string</td><td class="required">是</td><td>用户名</td></tr>
+                        <tr><td>password</td><td>string</td><td class="required">是</td><td>密码</td></tr>
+                        <tr><td>role</td><td>string</td><td class="optional">否</td><td>用户角色，默认为user</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-url">/auth/me</span>
+                </div>
+                <div class="endpoint-description">获取当前用户信息</div>
+                <div class="note">
+                    <div class="note-title">🔒 需要认证</div>
+                    请求头需要包含有效的 Authorization token
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-url">/auth/users</span>
+                </div>
+                <div class="endpoint-description">获取所有用户列表（仅管理员）</div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-url">/auth/change_password</span>
+                </div>
+                <div class="endpoint-description">修改当前用户密码</div>
+                <div class="params">
+                    <h4>请求参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>old_password</td><td>string</td><td class="required">是</td><td>原密码</td></tr>
+                        <tr><td>new_password</td><td>string</td><td class="required">是</td><td>新密码</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-url">/auth/users/:user_id/reset_password</span>
+                </div>
+                <div class="endpoint-description">重置指定用户密码（仅管理员）</div>
+                <div class="params">
+                    <h4>请求参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>new_password</td><td>string</td><td class="required">是</td><td>新密码</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method put">PUT</span>
+                    <span class="endpoint-url">/auth/users/:user_id</span>
+                </div>
+                <div class="endpoint-description">更新用户信息（仅管理员）</div>
+                <div class="params">
+                    <h4>请求参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>user_name</td><td>string</td><td class="optional">否</td><td>用户名</td></tr>
+                        <tr><td>role</td><td>string</td><td class="optional">否</td><td>用户角色</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method delete">DELETE</span>
+                    <span class="endpoint-url">/auth/users/:user_id</span>
+                </div>
+                <div class="endpoint-description">删除用户（仅管理员）</div>
+            </div>
+        </div>
+
+        <!-- 商品管理 -->
+        <div id="products" class="section">
+            <h2>📦 商品管理</h2>
+            
+            <!-- 获取商品列表 -->
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-url">/products</span>
+                </div>
+                <div class="endpoint-description">获取商品列表，支持分页和搜索</div>
+                
+                <div class="params">
+                    <h4>查询参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>page</td><td>number</td><td class="optional">否</td><td>页码，从1开始，默认1</td></tr>
+                        <tr><td>page_size</td><td>number</td><td class="optional">否</td><td>每页条数，默认20，最大100</td></tr>
+                        <tr><td>search</td><td>string</td><td class="optional">否</td><td>搜索关键词，支持商品编码、商品名称模糊查询</td></tr>
+                        <tr><td>category_code_1</td><td>string</td><td class="optional">否</td><td>按一级分类筛选</td></tr>
+                        <tr><td>category_code_2</td><td>string</td><td class="optional">否</td><td>按二级分类筛选</td></tr>
+                        <tr><td>has_stock_only</td><td>boolean</td><td class="optional">否</td><td>只显示有库存的商品，默认false</td></tr>
+                    </table>
+                </div>
+                
+                <div class="params">
+                    <h4>📤 请求示例:</h4>
+                    <pre><code>GET /api/products?page=1&page_size=10&search=衬衫&category_code_1=CLOTHING
+Authorization: Bearer your_jwt_token</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 成功响应 (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "data": {
+    "products": [
+      {
+        "product_id": "64f9a1b2c3d4e5f6789abc01",
+        "product_code": "SHIRT-001",
+        "product_name": "经典衬衫",
+        "unit": "件",
+        "image_path": "/uploads/shirt-001.jpg",
+        "has_sku": true,
+        "category_code_1": "CLOTHING",
+        "category_name_1": "服装",
+        "category_code_2": "TOPS",
+        "category_name_2": "上装",
+        "description": "高品质商务衬衫，多色多码可选",
+        "product_total_quantity": 280,
+        "total_sku_count": 4,
+        "total_location_count": 3,
+        "total_color_count": 2,
+        "colors": [
+          {
+            "color": "红",
+            "image_path": "/uploads/colors/shirt-001-red.jpg",
+            "color_total_quantity": 150,
+            "total_sku_count": 2,
+            "total_location_count": 2,
+            "sizes": [
+              {
+                "sku_size": "L",
+                "sku_code": "SHIRT-001-红-L",
+                "sku_total_quantity": 100,
+                "locations": [
+                  {
+                    "location_code": "A01-01-01",
+                    "stock_quantity": 60
+                  },
+                  {
+                    "location_code": "A01-01-02",
+                    "stock_quantity": 40
+                  }
+                ]
+              },
+              {
+                "sku_size": "XL",
+                "sku_code": "SHIRT-001-红-XL",
+                "sku_total_quantity": 50,
+                "locations": [
+                  {
+                    "location_code": "A01-01-01",
+                    "stock_quantity": 50
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "color": "蓝",
+            "image_path": "/uploads/colors/shirt-001-blue.jpg",
+            "color_total_quantity": 130,
+            "total_sku_count": 2,
+            "total_location_count": 3,
+            "sizes": [
+              {
+                "sku_size": "L",
+                "sku_code": "SHIRT-001-蓝-L",
+                "sku_total_quantity": 80,
+                "locations": [
+                  {
+                    "location_code": "A01-01-02",
+                    "stock_quantity": 80
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "skus": [
+          {
+            "sku_code": "SHIRT-001-红-L",
+            "sku_color": "红",
+            "sku_size": "L",
+            "image_path": "/uploads/colors/shirt-001-red.jpg"
+          },
+          {
+            "sku_code": "SHIRT-001-红-XL",
+            "sku_color": "红",
+            "sku_size": "XL",
+            "image_path": "/uploads/colors/shirt-001-red.jpg"
+          }
+        ],
+        "created_at": "2024-12-01T10:30:00Z",
+        "updated_at": "2024-12-01T15:30:00Z"
+      }
+    ],
+    "pagination": {
+      "current_page": 1,
+      "page_size": 10,
+      "total_count": 25,
+      "total_pages": 3,
+      "has_next_page": true,
+      "has_prev_page": false
+    }
+  },
+  "error_code": null,
+  "error_message": null
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📊 响应字段说明:</h4>
+                    <table class="param-table">
+                        <tr><th>字段名</th><th>类型</th><th>说明</th></tr>
+                        <tr><td colspan="3" style="background-color: #f0f8ff; font-weight: bold; text-align: center;">商品基础信息</td></tr>
+                        <tr><td>product_id</td><td>string</td><td>商品唯一ID</td></tr>
+                        <tr><td>product_code</td><td>string</td><td>商品编码</td></tr>
+                        <tr><td>product_name</td><td>string</td><td>商品名称</td></tr>
+                        <tr><td>unit</td><td>string</td><td>计量单位</td></tr>
+                        <tr><td>description</td><td>string</td><td>商品描述</td></tr>
+                        <tr><td colspan="3" style="background-color: #f0f8ff; font-weight: bold; text-align: center;">库存统计信息</td></tr>
+                        <tr><td>product_total_quantity</td><td>number</td><td>商品所有SKU的总库存数量</td></tr>
+                        <tr><td>total_sku_count</td><td>number</td><td>商品下SKU的总数量</td></tr>
+                        <tr><td>total_location_count</td><td>number</td><td>商品涉及的库位总数量</td></tr>
+                        <tr><td>total_color_count</td><td>number</td><td>商品的颜色数量</td></tr>
+                        <tr><td colspan="3" style="background-color: #f0f8ff; font-weight: bold; text-align: center;">颜色层级信息</td></tr>
+                        <tr><td>colors[].color</td><td>string</td><td>颜色名称</td></tr>
+                        <tr><td>colors[].color_total_quantity</td><td>number</td><td>该颜色下所有尺寸的总库存</td></tr>
+                        <tr><td>colors[].total_sku_count</td><td>number</td><td>该颜色下SKU数量</td></tr>
+                        <tr><td>colors[].total_location_count</td><td>number</td><td>该颜色涉及的库位数量</td></tr>
+                        <tr><td colspan="3" style="background-color: #f0f8ff; font-weight: bold; text-align: center;">SKU层级信息</td></tr>
+                        <tr><td>colors[].sizes[].sku_total_quantity</td><td>number</td><td>该SKU在所有库位的总库存</td></tr>
+                        <tr><td>colors[].sizes[].locations</td><td>array</td><td>该SKU在各库位的分布</td></tr>
+                        <tr><td>colors[].sizes[].locations[].stock_quantity</td><td>number</td><td>该SKU在特定库位的库存数量</td></tr>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 按ID获取商品详情 -->
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-url">/products/:id</span>
+                </div>
+                <div class="endpoint-description">根据商品ID获取详细信息</div>
+                
+                <div class="params">
+                    <h4>路径参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>id</td><td>string</td><td class="required">是</td><td>商品ID（MongoDB ObjectId）</td></tr>
+                    </table>
+                </div>
+                
+                <div class="params">
+                    <h4>📤 请求示例:</h4>
+                    <pre><code>GET /api/products/64f9a1b2c3d4e5f6789abc01
+Authorization: Bearer your_jwt_token</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 成功响应 (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "data": {
+    "product_id": "64f9a1b2c3d4e5f6789abc01",
+    "product_code": "SHIRT-001",
+    "product_name": "经典衬衫",
+    "unit": "件",
+    "has_sku": true,
+    "category_code_1": "CLOTHING",
+    "category_name_1": "服装",
+    "category_code_2": "TOPS",
+    "category_name_2": "上装",
+    "product_total_quantity": 150,
+    "colors": [
+      {
+        "color": "红",
+        "image_path": "/uploads/colors/shirt-001-red.jpg",
+        "color_total_quantity": 80,
+        "sizes": [
+          {
+            "sku_size": "L",
+            "sku_code": "SHIRT-001-红-L",
+            "sku_total_quantity": 50,
+            "locations": [
+              {
+                "location_code": "A01-01-01",
+                "sku_location_quantity": 30
+              },
+              {
+                "location_code": "A01-01-02",
+                "sku_location_quantity": 20
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "description": "高品质商务衬衫，多色多码可选",
+    "created_at": "2024-12-01T10:30:00Z",
+    "updated_at": "2024-12-01T15:30:00Z"
+  },
+  "error_code": null,
+  "error_message": null
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 商品不存在响应 (404 Not Found):</h4>
+                    <pre><code>{
+  "success": false,
+  "data": null,
+  "error_code": "PRODUCT_NOT_FOUND",
+  "error_message": "未找到商品"
+}</code></pre>
+                </div>
+            </div>
+            
+            <div class="note">
+                <div class="note-title">📝 商品数据结构说明</div>
+                <p>商品支持SKU模式，每个商品可以有多个SKU（颜色、尺寸组合）</p>
+                <div class="code-block">
+{
+  "product_id": "64f7b1c8e4b0c1234567890a",
+  "product_code": "PROD001",
+  "product_name": "测试商品",
+  "unit": "件",
+  "image_path": "/uploads/image123.jpg",
+  "has_sku": true,
+  "skus": [
+    {
+      "sku_code": "PROD001-RED-L",
+      "sku_color": "红色", 
+      "sku_size": "L",
+      "image_path": "/uploads/sku-xxx.jpg",
+      "external_codes": ["123456789", "987654321"]
+    }
+  ],
+  "product_total_quantity": 150,
+  "created_at": "2024-01-01T00:00:00.000Z",
+  "updated_at": "2024-01-01T00:00:00.000Z"
+}
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-url">/products</span>
+                </div>
+                <div class="endpoint-description">获取所有商品列表，包含SKU信息</div>
+                <div class="params">
+                    <h4>查询参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>page</td><td>number</td><td class="optional">否</td><td>页码，默认1</td></tr>
+                        <tr><td>page_size</td><td>number</td><td class="optional">否</td><td>每页数量，默认50</td></tr>
+                        <tr><td>search</td><td>string</td><td class="optional">否</td><td>搜索关键词</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-url">/products/code/:code</span>
+                </div>
+                <div class="endpoint-description">根据编码获取商品信息（支持商品编码或SKU编码）</div>
+                <div class="note">
+                    <div class="note-title">💡 智能识别</div>
+                    <p>如果传入SKU编码（包含"-"），系统会自动解析基础商品编码</p>
+                </div>
+                
+                <div class="params">
+                    <h4>路径参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>code</td><td>string</td><td class="required">是</td><td>商品编码（product_code）或SKU编码（sku_code）</td></tr>
+                    </table>
+                    
+                    <div class="note">
+                        <div class="note-title">⚠️ 路径参数说明</div>
+                        <p>此路径参数为历史兼容性保留，实际接收标准的 <strong>product_code</strong> 或 <strong>sku_code</strong> 值</p>
+                    </div>
+                </div>
+                
+                <div class="params">
+                    <h4>📤 请求示例:</h4>
+                    <pre><code>GET /api/products/code/SHIRT-001
+Authorization: Bearer your_jwt_token
+
+# 或者使用SKU编码
+GET /api/products/code/SHIRT-001-红-L
+Authorization: Bearer your_jwt_token</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 成功响应 (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "data": {
+    "product_id": "64f9a1b2c3d4e5f6789abc01",
+    "product_code": "SHIRT-001",
+    "product_name": "经典衬衫",
+    "unit": "件",
+    "has_sku": true,
+    "category_code_1": "CLOTHING",
+    "category_name_1": "服装",
+    "category_code_2": "TOPS",
+    "category_name_2": "上装",
+    "product_total_quantity": 150,
+    "colors": [
+      {
+        "color": "红",
+        "image_path": "/uploads/colors/shirt-001-red.jpg",
+        "color_total_quantity": 80,
+        "sizes": [
+          {
+            "sku_size": "L",
+            "sku_code": "SHIRT-001-红-L",
+            "sku_total_quantity": 50,
+            "locations": [
+              {
+                "location_code": "A01-01-01",
+                "quantity": 30
+              },
+              {
+                "location_code": "A01-01-02", 
+                "quantity": 20
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "description": "高品质商务衬衫，多色多码可选",
+    "created_at": "2024-12-01T10:30:00Z",
+    "updated_at": "2024-12-01T15:30:00Z"
+  },
+  "error_code": null,
+  "error_message": null
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 商品不存在响应 (404 Not Found):</h4>
+                    <pre><code>{
+  "success": false,
+  "data": null,
+  "error_code": "PRODUCT_NOT_FOUND",
+  "error_message": "商品不存在"
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-url">/products</span>
+                </div>
+                <div class="endpoint-description">创建新商品</div>
+                <div class="params">
+                    <h4>请求参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>product_code</td><td>string</td><td class="required">是</td><td>商品编码（唯一）</td></tr>
+                        <tr><td>product_name</td><td>string</td><td class="optional">否</td><td>商品名称，默认使用编码</td></tr>
+                        <tr><td>unit</td><td>string</td><td class="optional">否</td><td>计量单位，默认"件"</td></tr>
+                        <tr><td>colors</td><td>array</td><td class="required">是</td><td>颜色列表（必须提供，系统不支持简单商品）</td></tr>
+                        <tr><td>description</td><td>string</td><td class="optional">否</td><td>商品描述</td></tr>
+                        <tr><td>category_code_1</td><td>string</td><td class="optional">否</td><td>一级分类编码（如"CLOTHING"）</td></tr>
+                        <tr><td>category_name_1</td><td>string</td><td class="optional">否</td><td>一级分类名称（如"服装"）</td></tr>
+                        <tr><td>category_code_2</td><td>string</td><td class="optional">否</td><td>二级分类编码（如"TOPS"）</td></tr>
+                        <tr><td>category_name_2</td><td>string</td><td class="optional">否</td><td>二级分类名称（如"上装"）</td></tr>
+                        <tr><td>operator_id</td><td>string</td><td class="required">是</td><td>操作人ID</td></tr>
+                        <tr><td>is_urgent</td><td>boolean</td><td class="optional">否</td><td>是否紧急操作，默认false</td></tr>
+                        <tr><td>notes</td><td>string</td><td class="optional">否</td><td>备注信息</td></tr>
+                    </table>
+                </div>
+                
+                <div class="note">
+                    <div class="note-title">🔧 商品类型说明</div>
+                    <p><strong>系统只支持变体商品：</strong></p>
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                        <li><strong>变体商品（has_sku: true）:</strong> 必须提供colors数组，系统不支持简单商品</li>
+                        <li><strong>层级结构：</strong> 商品 → 颜色 → 尺寸，图片属于颜色层级</li>
+                        <li><strong>自动生成SKU：</strong> 系统根据商品编码、颜色、尺寸自动生成SKU编码</li>
+                    </ul>
+                </div>
+                
+                <div class="note">
+                    <div class="note-title">🏷️ 商品分类说明</div>
+                    <p><strong>商品分类字段用于组织和管理不同类型的商品：</strong></p>
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                        <li><strong>一级分类：</strong>主要商品类别，如"服装"、"鞋类"、"配件"、"家居用品"</li>
+                        <li><strong>二级分类：</strong>细分类别，如"上装"、"下装"、"内衣"、"运动鞋"</li>
+                        <li><strong>常见服装分类示例：</strong></li>
+                                                 <ul style="margin-top: 0.3rem; padding-left: 1.5rem;">
+                             <li>CLOTHING/服装 → TOPS/上装（衬衫、T恤、外套、毛衣）</li>
+                             <li>CLOTHING/服装 → BOTTOMS/下装（长裤、短裤、裙子、牛仔裤）</li>
+                             <li>CLOTHING/服装 → UNDERWEAR/内衣（内裤、文胸、睡衣）</li>
+                             <li>FOOTWEAR/鞋类 → CASUAL/休闲鞋、FORMAL/正装鞋、SPORTS/运动鞋</li>
+                             <li>ACCESSORIES/配件 → BAGS/包类、BELTS/皮带、JEWELRY/饰品</li>
+                             <li>STATIONERY/文具 → WRITING/书写用品、STORAGE/收纳用品</li>
+                         </ul>
+                    </ul>
+                </div>
+                
+                <div class="note">
+                    <div class="note-title">📦 颜色数组格式说明</div>
+                    <p><strong>colors数组中每个颜色元素包含：</strong></p>
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                        <li><strong>color:</strong> 颜色名称（必需，如"红"）</li>
+                        <li><strong>image_path:</strong> 该颜色的商品图片路径（必需）</li>
+                        <li><strong>sizes:</strong> 该颜色下的尺寸数组（必需）</li>
+                    </ul>
+                    <p><strong>sizes数组中每个尺寸元素包含：</strong></p>
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                        <li><strong>size:</strong> 尺寸名称（必需，如"L"）</li>
+                        <li><strong>sku_code:</strong> 该颜色尺寸对应的SKU编码（可选，系统可自动生成）</li>
+                    </ul>
+                    <p><strong>🎨 层级结构：</strong>商品 → 颜色 → 尺寸，图片属于颜色层级，SKU编码在尺寸层级</p>
+                </div>
+                
+                <div class="params">
+                    <h4>📤 请求示例 - 变体商品（多颜色尺寸）:</h4>
+                    <pre><code>POST /api/products
+Content-Type: application/json
+Authorization: Bearer your_jwt_token
+
+{
+  "product_code": "SHIRT-001",
+  "product_name": "经典衬衫",
+  "unit": "件",
+  "category_code_1": "CLOTHING",
+  "category_name_1": "服装",
+  "category_code_2": "TOPS",
+  "category_name_2": "上装",
+  "colors": [
+    {
+      "color": "红",
+      "image_path": "/uploads/colors/shirt-001-red.jpg",
+      "sizes": [
+        {
+          "size": "L",
+          "sku_code": "SHIRT-001-红-L"
+        },
+        {
+          "size": "XL"
+        }
+      ]
+    },
+    {
+      "color": "蓝",
+      "image_path": "/uploads/colors/shirt-001-blue.jpg",
+      "sizes": [
+        {
+          "size": "M",
+          "sku_code": "SHIRT-001-蓝-M"
+        },
+        {
+          "size": "L"
+        }
+      ]
+    }
+  ],
+  "description": "高品质商务衬衫，多色多码可选",
+  "operator_id": "user123",
+  "is_urgent": false,
+  "notes": "新品上线"
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 成功响应 (201 Created):</h4>
+                    <pre><code>{
+  "success": true,
+     "data": {
+     "product_id": "64f9a1b2c3d4e5f6789abc01",
+     "product_code": "SHIRT-001",
+     "product_name": "经典衬衫",
+     "unit": "件",
+     "has_sku": true,
+     "category_code_1": "CLOTHING",
+     "category_name_1": "服装",
+     "category_code_2": "TOPS",
+     "category_name_2": "上装",
+     "product_total_quantity": 0,
+     "colors": [
+       {
+         "color": "红",
+         "image_path": "/uploads/colors/shirt-001-red.jpg",
+         "color_total_quantity": 0,
+         "sizes": [
+           {
+             "sku_size": "L",
+             "sku_code": "SHIRT-001-红-L",
+             "sku_total_quantity": 0,
+             "locations": []
+           }
+         ]
+       },
+       {
+         "color": "蓝",
+         "image_path": "/uploads/colors/shirt-001-blue.jpg",
+         "color_total_quantity": 0,
+         "sizes": [
+           {
+             "sku_size": "M",
+             "sku_code": "SHIRT-001-蓝-M",
+             "sku_total_quantity": 0,
+             "locations": []
+           }
+         ]
+       }
+     ],
+    "description": "高品质商务衬衫，多色多码可选",
+    "created_at": "2024-12-01T10:30:00Z",
+    "operated_at": "2024-12-01T10:30:00Z",
+    "operator_id": "user123",
+    "is_urgent": false,
+    "notes": "新品上线"
+  },
+  "error_code": null,
+  "error_message": null
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>响应字段说明:</h4>
+                    <table class="param-table">
+                        <tr><th>字段名</th><th>类型</th><th>说明</th></tr>
+                        <tr><td>product_id</td><td>string</td><td>系统生成的商品唯一ID</td></tr>
+                        <tr><td>product_code</td><td>string</td><td>商品编码</td></tr>
+                        <tr><td>product_name</td><td>string</td><td>商品名称</td></tr>
+                        <tr><td>unit</td><td>string</td><td>计量单位</td></tr>
+                        <tr><td>has_sku</td><td>boolean</td><td>是否有SKU变体（系统固定为true，只支持变体商品）</td></tr>
+                        <tr><td>category_code_1</td><td>string</td><td>一级分类编码</td></tr>
+                        <tr><td>category_name_1</td><td>string</td><td>一级分类名称</td></tr>
+                        <tr><td>category_code_2</td><td>string</td><td>二级分类编码</td></tr>
+                        <tr><td>category_name_2</td><td>string</td><td>二级分类名称</td></tr>
+                        <tr><td>product_total_quantity</td><td>number</td><td>商品所有SKU的总数量</td></tr>
+                        <tr><td>colors</td><td>array</td><td>按颜色分组的SKU结构，每个颜色包含对应的图片</td></tr>
+                        <tr><td>colors[].color_total_quantity</td><td>number</td><td>该颜色下所有尺寸的总数量</td></tr>
+                        <tr><td>colors[].sizes[].sku_total_quantity</td><td>number</td><td>该SKU在所有库位的总数量</td></tr>
+                        <tr><td>description</td><td>string</td><td>商品描述</td></tr>
+                        <tr><td>created_at</td><td>string</td><td>创建时间（ISO格式）</td></tr>
+                        <tr><td>operated_at</td><td>string</td><td>操作时间（ISO格式）</td></tr>
+                        <tr><td>operator_id</td><td>string</td><td>操作人ID</td></tr>
+                        <tr><td>is_urgent</td><td>boolean</td><td>是否紧急操作</td></tr>
+                        <tr><td>notes</td><td>string</td><td>备注信息</td></tr>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 修改商品 -->
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method put">PUT</span>
+                    <span class="endpoint-url">/products/:id</span>
+                </div>
+                <div class="endpoint-description">修改商品信息</div>
+                
+                <div class="note">
+                    <div class="note-title">🔧 修改功能特点</div>
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                        <li><strong>颜色结构管理</strong>：只支持新的颜色结构（商品→颜色→尺寸）</li>
+                        <li><strong>安全更新</strong>：只更新提供的字段，未提供的字段保持不变</li>
+                        <li><strong>分类支持</strong>：支持一级、二级分类的更新</li>
+                    </ul>
+                </div>
+                
+                <div class="params">
+                    <h4>路径参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>id</td><td>string</td><td class="required">是</td><td>商品ID（MongoDB ObjectId）</td></tr>
+                    </table>
+                </div>
+                
+                <div class="params">
+                    <h4>请求参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>operator_id</td><td>string</td><td class="required">是</td><td>操作人ID</td></tr>
+                        <tr><td>product_code</td><td>string</td><td class="optional">否</td><td>商品编码</td></tr>
+                        <tr><td>product_name</td><td>string</td><td class="optional">否</td><td>商品名称</td></tr>
+                        <tr><td>unit</td><td>string</td><td class="optional">否</td><td>计量单位，默认"件"</td></tr>
+                        <tr><td>description</td><td>string</td><td class="optional">否</td><td>商品描述</td></tr>
+                        <tr><td>category_code_1</td><td>string</td><td class="optional">否</td><td>一级分类编码</td></tr>
+                        <tr><td>category_name_1</td><td>string</td><td class="optional">否</td><td>一级分类名称</td></tr>
+                        <tr><td>category_code_2</td><td>string</td><td class="optional">否</td><td>二级分类编码</td></tr>
+                        <tr><td>category_name_2</td><td>string</td><td class="optional">否</td><td>二级分类名称</td></tr>
+                        <tr><td>colors</td><td>array</td><td class="optional">否</td><td>颜色结构数组</td></tr>
+                        <tr><td>is_urgent</td><td>boolean</td><td class="optional">否</td><td>是否紧急操作，默认false</td></tr>
+                        <tr><td>notes</td><td>string</td><td class="optional">否</td><td>操作备注</td></tr>
+                    </table>
+                </div>
+                
+                <div class="params">
+                    <h4>📤 请求示例 - 修改商品名称:</h4>
+                    <pre><code>PUT /api/products/64f9a1b2c3d4e5f6789abc01
+Content-Type: application/json
+Authorization: Bearer your_jwt_token
+
+{
+  "product_name": "经典衬衫（升级版）",
+  "description": "更新了面料的高品质商务衬衫",
+  "operator_id": "user123",
+  "notes": "面料升级"
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📤 请求示例 - 修改颜色结构:</h4>
+                    <pre><code>PUT /api/products/64f9a1b2c3d4e5f6789abc01
+Content-Type: application/json
+Authorization: Bearer your_jwt_token
+
+{
+  "colors": [
+    {
+      "color": "红",
+      "image_path": "/uploads/colors/shirt-001-red-v2.jpg",
+      "sizes": [
+        { "size": "M" },
+        { "size": "L" },
+        { "size": "XL" }
+      ]
+    },
+    {
+      "color": "黑",
+      "image_path": "/uploads/colors/shirt-001-black.jpg",
+      "sizes": [
+        { "size": "L" }
+      ]
+    }
+  ],
+  "operator_id": "user123",
+  "notes": "新增黑色，停产红色S码",
+  "is_urgent": false
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 成功响应 (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "data": {
+    "product_id": "64f9a1b2c3d4e5f6789abc01",
+    "product_code": "SHIRT-001",
+    "product_name": "经典衬衫（升级版）",
+    "unit": "件",
+    "has_sku": true,
+    "product_total_quantity": 150,
+    "colors": [
+      {
+        "color": "红",
+        "image_path": "/uploads/colors/shirt-001-red.jpg",
+        "color_total_quantity": 80,
+        "sizes": [
+          {
+            "sku_size": "L",
+            "sku_code": "SHIRT-001-红-L",
+            "sku_total_quantity": 50
+          }
+        ]
+      }
+    ],
+    "description": "更新了面料的高品质商务衬衫",
+    "updated_at": "2024-12-01T15:30:00Z",
+    "operated_at": "2024-12-01T15:30:00Z",
+    "operator_id": "user123",
+    "is_urgent": false,
+    "notes": "面料升级"
+  },
+  "error_code": null,
+  "error_message": null
+}</code></pre>
+                </div>
+            </div>
+            
+            <!-- 删除商品 -->
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method delete">DELETE</span>
+                    <span class="endpoint-url">/products/:id</span>
+                </div>
+                <div class="endpoint-description">删除商品（安全删除，有库存时拒绝）</div>
+                
+                <div class="warning">
+                    <div class="warning-title">⚠️ 安全限制</div>
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                        <li><strong>库存检查</strong>：有库存的商品不能删除</li>
+                        <li><strong>级联删除</strong>：删除商品时会自动清理所有相关库存记录</li>
+                        <li><strong>不可恢复</strong>：删除操作无法撤销，请谨慎操作</li>
+                    </ul>
+                </div>
+                
+                <div class="params">
+                    <h4>路径参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>id</td><td>string</td><td class="required">是</td><td>商品ID（MongoDB ObjectId）</td></tr>
+                    </table>
+                </div>
+                
+                <div class="params">
+                    <h4>请求参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>operator_id</td><td>string</td><td class="required">是</td><td>操作人ID</td></tr>
+                        <tr><td>is_urgent</td><td>boolean</td><td class="optional">否</td><td>是否紧急操作，默认false</td></tr>
+                        <tr><td>notes</td><td>string</td><td class="optional">否</td><td>删除原因说明</td></tr>
+                    </table>
+                </div>
+                
+                <div class="params">
+                    <h4>📤 请求示例:</h4>
+                    <pre><code>DELETE /api/products/64f9a1b2c3d4e5f6789abc01
+Content-Type: application/json
+Authorization: Bearer your_jwt_token
+
+{
+  "operator_id": "user123",
+  "notes": "产品停产，清理系统数据",
+  "is_urgent": false
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 成功响应 (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "data": {
+    "product_id": "64f9a1b2c3d4e5f6789abc01",
+    "operated_at": "2024-12-01T15:30:00Z",
+    "operator_id": "user123",
+    "is_urgent": false,
+    "notes": "产品停产，清理系统数据"
+  },
+  "error_code": null,
+  "error_message": null
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 库存检查失败响应 (400 Bad Request):</h4>
+                    <pre><code>{
+  "success": false,
+  "data": {
+    "product_id": "64f9a1b2c3d4e5f6789abc01",
+    "stock_quantity": 150
+  },
+  "error_code": "OPERATION_NOT_ALLOWED",
+  "error_message": "商品还有库存，不能删除"
+}</code></pre>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 库存操作 -->
+        <div id="inventory-operations" class="section">
+            <h2>🔧 库存操作</h2>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-url">/inventory/adjust</span>
+                </div>
+                <div class="endpoint-description">库存盘点调整（直接设置目标库存数量）</div>
+                <div class="params">
+                    <h4>请求参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>location_code</td><td>string</td><td class="required">是</td><td>库位编码</td></tr>
+                        <tr><td>sku_code</td><td>string</td><td class="required">是</td><td>SKU编码（系统自动解析商品信息）</td></tr>
+                        <tr><td>target_quantity</td><td>number</td><td class="required">是</td><td>盘点目标库存数量（直接设置为此数量）</td></tr>
+                        <tr><td>operator_id</td><td>string</td><td class="required">是</td><td>操作人ID</td></tr>
+                        <tr><td>notes</td><td>string</td><td class="optional">否</td><td>盘点备注</td></tr>
+                        <tr><td>batch_number</td><td>string</td><td class="optional">否</td><td>批次号</td></tr>
+                        <tr><td>is_urgent</td><td>boolean</td><td class="optional">否</td><td>是否紧急盘点</td></tr>
+                    </table>
+                </div>
+                
+                <div class="note">
+                    <div class="note-title">📊 盘点逻辑说明</div>
+                    <p>盘点调整是<strong>直接设置目标库存数量</strong>，不是增减操作：</p>
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                        <li>如果实际盘点发现有100件，就设置 target_quantity: 100</li>
+                        <li>不管之前库存是80还是120，都会直接调整为100</li>
+                        <li>系统会自动计算调整差额并记录到盘点历史中</li>
+                    </ul>
+                </div>
+                
+                <div class="params">
+                    <h4>📤 请求示例:</h4>
+                    <pre><code>POST /api/inventory/adjust
+Content-Type: application/json
+Authorization: Bearer your_jwt_token
+
+{
+  "location_code": "A01-01-01",
+  "sku_code": "SHIRT-001-红-L",
+  "target_quantity": 95,
+  "operator_id": "user123",
+  "notes": "月末盘点，实际库存95件",
+  "is_urgent": false
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 成功响应 (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "data": {
+    "location_code": "A01-01-01",
+    "product_code": "SHIRT-001", 
+    "sku_code": "SHIRT-001-红-L",
+    "target_quantity": 95,
+    "previous_quantity": 100,
+    "adjusted_quantity": -5,
+    "current_quantity": 95,
+    "sku_location_quantity": 95,
+    "sku_total_quantity": 380,
+    "operator_id": "user123",
+    "adjusted_at": "2024-12-01T10:30:00Z",
+    "notes": "月末盘点，实际库存95件",
+    "batch_number": "BATCH20241201"
+  }
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>响应字段说明:</h4>
+                    <table class="param-table">
+                        <tr><th>字段名</th><th>类型</th><th>说明</th></tr>
+                        <tr><td>location_code</td><td>string</td><td>库位编码</td></tr>
+                        <tr><td>product_code</td><td>string</td><td>商品编码（从SKU自动解析）</td></tr>
+                        <tr><td>sku_code</td><td>string</td><td>SKU编码</td></tr>
+                        <tr><td>target_quantity</td><td>number</td><td>盘点设置的目标库存数量</td></tr>
+                        <tr><td>previous_quantity</td><td>number</td><td>调整前库存数量</td></tr>
+                        <tr><td>adjusted_quantity</td><td>number</td><td>调整差额（正数表示增加，负数表示减少）</td></tr>
+                        <tr><td>current_quantity</td><td>number</td><td>调整后的当前库存数量</td></tr>
+                        <tr><td>sku_location_quantity</td><td>number</td><td>该SKU在当前库位的总数量</td></tr>
+                        <tr><td>sku_total_quantity</td><td>number</td><td>该SKU在所有库位的总数量</td></tr>
+                        <tr><td>operator_id</td><td>string</td><td>操作人ID</td></tr>
+                        <tr><td>adjusted_at</td><td>string</td><td>盘点调整时间（ISO格式）</td></tr>
+                        <tr><td>notes</td><td>string</td><td>盘点备注信息</td></tr>
+                        <tr><td>batch_number</td><td>string</td><td>批次号</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-url">/inventory/clear</span>
+                </div>
+                <div class="endpoint-description">清空库存（将指定SKU在指定库位的库存清零）</div>
+                <div class="params">
+                    <h4>请求参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>sku_code</td><td>string</td><td class="required">是</td><td>SKU编码（系统自动解析商品信息）</td></tr>
+                        <tr><td>location_code</td><td>string</td><td class="required">是</td><td>库位编码</td></tr>
+                        <tr><td>operator_id</td><td>string</td><td class="required">是</td><td>操作人ID</td></tr>
+                        <tr><td>batch_number</td><td>string</td><td class="optional">否</td><td>批次号</td></tr>
+                        <tr><td>notes</td><td>string</td><td class="optional">否</td><td>清库存备注</td></tr>
+                        <tr><td>is_urgent</td><td>boolean</td><td class="optional">否</td><td>是否紧急清库存</td></tr>
+                    </table>
+                </div>
+                
+                <div class="note">
+                    <div class="note-title">🗑️ 清库存逻辑说明</div>
+                    <p>清库存是<strong>将指定库位的指定SKU库存直接清零</strong>：</p>
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                        <li>不管当前库存是多少，都会直接设置为0</li>
+                        <li>如果库位或SKU不存在，操作会失败</li>
+                        <li>清库存操作会记录到库存调整历史中</li>
+                        <li>常用于商品下架、过期处理、损坏处理等场景</li>
+                    </ul>
+                </div>
+                
+                <div class="params">
+                    <h4>📤 请求示例:</h4>
+                    <pre><code>POST /api/inventory/clear
+Content-Type: application/json
+Authorization: Bearer your_jwt_token
+
+{
+  "sku_code": "SHIRT-001-红-L",
+  "location_code": "A01-01-01",
+  "operator_id": "user123",
+  "notes": "商品下架，清空库存",
+  "is_urgent": false
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 成功响应 (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "data": {
+    "location_code": "A01-01-01",
+    "product_code": "SHIRT-001", 
+    "sku_code": "SHIRT-001-红-L",
+    "previous_quantity": 95,
+    "cleared_quantity": 95,
+    "current_quantity": 0,
+    "sku_location_quantity": 0,
+    "sku_total_quantity": 285,
+    "operator_id": "user123",
+    "cleared_at": "2024-12-01T10:30:00Z",
+    "notes": "商品下架，清空库存",
+    "batch_number": "BATCH20241201"
+  }
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>响应字段说明:</h4>
+                    <table class="param-table">
+                        <tr><th>字段名</th><th>类型</th><th>说明</th></tr>
+                        <tr><td>location_code</td><td>string</td><td>库位编码</td></tr>
+                        <tr><td>product_code</td><td>string</td><td>商品编码（从SKU自动解析）</td></tr>
+                        <tr><td>sku_code</td><td>string</td><td>SKU编码</td></tr>
+                        <tr><td>previous_quantity</td><td>number</td><td>清库存前的数量</td></tr>
+                        <tr><td>cleared_quantity</td><td>number</td><td>清除的数量</td></tr>
+                        <tr><td>current_quantity</td><td>number</td><td>清库存后的数量（固定为0）</td></tr>
+                        <tr><td>sku_location_quantity</td><td>number</td><td>该SKU在当前库位的数量（固定为0）</td></tr>
+                        <tr><td>sku_total_quantity</td><td>number</td><td>该SKU在所有库位的总数量</td></tr>
+                        <tr><td>operator_id</td><td>string</td><td>操作人ID</td></tr>
+                        <tr><td>cleared_at</td><td>string</td><td>清库存时间（ISO格式）</td></tr>
+                        <tr><td>notes</td><td>string</td><td>清库存备注信息</td></tr>
+                        <tr><td>batch_number</td><td>string</td><td>批次号</td></tr>
+                    </table>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 SKU不存在响应 (404 Not Found):</h4>
+                    <pre><code>{
+  "success": false,
+  "data": null,
+  "error_code": "SKU_NOT_FOUND",
+  "error_message": "指定库位中没有找到该SKU"
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-url">/inventory/transfer</span>
+                </div>
+                <div class="endpoint-description">库存转移（从一个库位转移到另一个库位）</div>
+                <div class="params">
+                    <h4>请求参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>sku_code</td><td>string</td><td class="required">是</td><td>SKU编码（系统自动解析商品信息）</td></tr>
+                        <tr><td>from_location_code</td><td>string</td><td class="required">是</td><td>源库位编码</td></tr>
+                        <tr><td>to_location_code</td><td>string</td><td class="required">是</td><td>目标库位编码</td></tr>
+                        <tr><td>transfer_quantity</td><td>number</td><td class="required">是</td><td>转移数量（必须大于0）</td></tr>
+                        <tr><td>operator_id</td><td>string</td><td class="required">是</td><td>操作人ID</td></tr>
+                        <tr><td>batch_number</td><td>string</td><td class="optional">否</td><td>批次号</td></tr>
+                        <tr><td>notes</td><td>string</td><td class="optional">否</td><td>转移备注</td></tr>
+                    </table>
+                </div>
+                
+                <div class="note">
+                    <div class="note-title">🔄 转移逻辑说明</div>
+                    <p>库存转移是<strong>从源库位转移到目标库位</strong>，总库存数量不变：</p>
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                        <li>从源库位减少指定数量</li>
+                        <li>向目标库位增加相同数量</li>
+                        <li>如果目标库位不存在，系统会自动创建</li>
+                        <li>转移前会检查源库位是否有足够的库存</li>
+                    </ul>
+                </div>
+                
+                <div class="params">
+                    <h4>📤 请求示例:</h4>
+                    <pre><code>POST /api/inventory/transfer
+Content-Type: application/json
+Authorization: Bearer your_jwt_token
+
+{
+  "sku_code": "SHIRT-001-红-L",
+  "from_location_code": "A01-01-01",
+  "to_location_code": "B02-02-02",
+  "transfer_quantity": 20,
+  "operator_id": "user123",
+  "notes": "库位整理，转移至新库位",
+  "batch_number": "BATCH20241201"
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 成功响应 (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "data": {
+    "product_code": "SHIRT-001",
+    "sku_code": "SHIRT-001-红-L",
+    "from_location_code": "A01-01-01",
+    "to_location_code": "B02-02-02",
+    "transfer_quantity": 20,
+    "sku_location_quantity": 20,
+    "sku_total_quantity": 380,
+    "operator_id": "user123",
+    "transfer_at": "2024-12-01T10:30:00Z",
+    "notes": "库位整理，转移至新库位",
+    "batch_number": "BATCH20241201"
+  }
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>响应字段说明:</h4>
+                    <table class="param-table">
+                        <tr><th>字段名</th><th>类型</th><th>说明</th></tr>
+                        <tr><td>product_code</td><td>string</td><td>商品编码（从SKU自动解析）</td></tr>
+                        <tr><td>sku_code</td><td>string</td><td>SKU编码</td></tr>
+                        <tr><td>from_location_code</td><td>string</td><td>源库位编码</td></tr>
+                        <tr><td>to_location_code</td><td>string</td><td>目标库位编码</td></tr>
+                        <tr><td>transfer_quantity</td><td>number</td><td>转移数量</td></tr>
+                        <tr><td>sku_location_quantity</td><td>number</td><td>目标库位该SKU的数量</td></tr>
+                        <tr><td>sku_total_quantity</td><td>number</td><td>该SKU在所有库位的总数量</td></tr>
+                        <tr><td>operator_id</td><td>string</td><td>操作人ID</td></tr>
+                        <tr><td>transfer_at</td><td>string</td><td>转移时间（ISO格式）</td></tr>
+                        <tr><td>notes</td><td>string</td><td>转移备注</td></tr>
+                        <tr><td>batch_number</td><td>string</td><td>批次号</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 入库操作 -->
+        <div id="inbound" class="section">
+            <h2>📥 入库操作</h2>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-url">/inbound</span>
+                </div>
+                <div class="endpoint-description">商品入库操作</div>
+                <div class="params">
+                    <h4>请求参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>sku_code</td><td>string</td><td class="required">是</td><td>SKU编码（格式："商品编码-颜色-尺寸"）</td></tr>
+                        <tr><td>location_code</td><td>string</td><td class="required">是</td><td>库位编码（如："A01-01-01"）</td></tr>
+                        <tr><td>inbound_quantity</td><td>number</td><td class="required">是</td><td>入库数量（必须大于0）</td></tr>
+                        <tr><td>batch_number</td><td>string</td><td class="optional">否</td><td>批次号</td></tr>
+                        <tr><td>operator_id</td><td>string</td><td class="optional">否</td><td>操作人ID</td></tr>
+                        <tr><td>notes</td><td>string</td><td class="optional">否</td><td>备注信息</td></tr>
+                        <tr><td>is_urgent</td><td>boolean</td><td class="optional">否</td><td>是否紧急入库，默认false</td></tr>
+                    </table>
+                </div>
+                <div class="note">
+                    <div class="note-title">🤖 智能解析</div>
+                    <p>系统会从SKU编码自动解析商品信息，商品必须预先存在，如果库位不存在则自动创建</p>
+                </div>
+                
+                <div class="note">
+                    <div class="note-title">⚡ is_urgent 参数详解</div>
+                    <p><strong>参数作用：</strong>标记入库操作的紧急程度，影响业务处理优先级</p>
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                        <li><strong>true</strong> - 紧急入库：缺货急需补充、客户催单、特殊订单等</li>
+                        <li><strong>false</strong> - 普通入库：正常补货、日常库存补充、预计划入库</li>
+                    </ul>
+                    <p><strong>业务价值：</strong>用于优先级管理、数据分析、流程控制和报表统计</p>
+                </div>
+                
+                <div class="params">
+                    <h4>📤 接收参数示例:</h4>
+                    <pre><code>POST /api/inbound
+Content-Type: application/json
+Authorization: Bearer your_jwt_token
+
+{
+  "sku_code": "SHIRT-001-红-L",
+  "location_code": "A01-01-01",
+  "inbound_quantity": 50,
+  "batch_number": "BATCH20241201",
+  "operator_id": "user123",
+  "notes": "新货入库",
+  "is_urgent": false
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 成功响应 (201 Created):</h4>
+                    <pre><code>{
+  "success": true,
+  "inventory": {
+    "product_code": "SHIRT-001",
+    "product_name": "SHIRT-001",
+    "location_code": "A01-01-01",
+    "inbound_quantity": 50,
+    "sku_code": "SHIRT-001-红-L",
+    "sku_color": "红", 
+    "sku_size": "L",
+    "sku_location_quantity": 150,
+    "sku_total_quantity": 480
+  }
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>响应字段说明:</h4>
+                    <table class="param-table">
+                        <tr><th>字段名</th><th>类型</th><th>说明</th></tr>
+                        <tr><td>product_code</td><td>string</td><td>商品编码（从SKU解析）</td></tr>
+                        <tr><td>product_name</td><td>string</td><td>商品名称</td></tr>
+                        <tr><td>location_code</td><td>string</td><td>库位编码</td></tr>
+                        <tr><td>inbound_quantity</td><td>number</td><td>本次入库数量</td></tr>
+                        <tr><td>sku_code</td><td>string</td><td>完整SKU编码</td></tr>
+                        <tr><td>sku_color</td><td>string</td><td>SKU颜色</td></tr>
+                        <tr><td>sku_size</td><td>string</td><td>SKU尺寸</td></tr>
+                        <tr><td>sku_location_quantity</td><td>number</td><td>该SKU在当前库位的总数量</td></tr>
+                        <tr><td>sku_total_quantity</td><td>number</td><td>该SKU在所有库位的总数量</td></tr>
+                    </table>
+                </div>
+                
+                <div class="note">
+                    <div class="note-title">📋 请求示例</div>
+                    <pre><code>// 普通入库
+{
+  "sku_code": "SHIRT-001-红-L",
+  "location_code": "A01-01-01",
+  "stock_quantity": 100,
+  "is_urgent": false,
+  "notes": "正常补货"
+}
+
+// 紧急入库
+{
+  "sku_code": "SHIRT-002-蓝-M", 
+  "location_code": "B02-01-01",
+  "stock_quantity": 50,
+  "is_urgent": true,
+  "notes": "客户急单，优先处理",
+  "operator_id": "user123"
+}</code></pre>
+                </div>
+                
+                <div class="warning">
+                    <div class="warning-title">❌ 错误响应示例</div>
+                    <pre><code>// 1. 商品不存在 (404 Not Found)
+{
+  "success": false,
+  "error_code": "PRODUCT_NOT_FOUND", 
+  "error_message": "商品不存在，请先创建商品：SHIRT-001"
+}
+
+// 2. 缺少SKU编码 (400 Bad Request)
+{
+  "success": false,
+  "error_code": "MISSING_SKU_CODE",
+  "error_message": "sku_code字段为必填，必须提供SKU编码"
+}
+
+// 3. 缺少库位编码 (400 Bad Request)
+{
+  "success": false,
+  "error_code": "MISSING_LOCATION_CODE",
+  "error_message": "location_code字段为必填，必须提供库位编码"
+}
+
+// 4. 无效数量 (400 Bad Request)
+{
+  "success": false,
+  "error_code": "INVALID_QUANTITY",
+  "error_message": "stock_quantity必须是大于0的数字"
+}
+
+// 5. 命名规范错误 (400 Bad Request)
+{
+  "success": false,
+  "error_code": "INVALID_NAMING",
+  "error_message": "请求参数必须使用 snake_case 命名"
+}
+
+// 6. 服务器错误 (500 Internal Server Error)
+{
+  "success": false,
+  "error": "Database connection failed",
+  "message": "入库失败"
+}</code></pre>
+                </div>
+                
+                <div class="success">
+                    <div class="success-title">📋 接收和响应总结</div>
+                    <table class="param-table">
+                        <tr><th>项目</th><th>说明</th></tr>
+                        <tr><td><strong>接收方式</strong></td><td>POST请求，Content-Type: application/json</td></tr>
+                        <tr><td><strong>必填参数</strong></td><td>sku_code, location_code, inbound_quantity</td></tr>
+                        <tr><td><strong>可选参数</strong></td><td>batch_number, operator_id, notes, is_urgent</td></tr>
+                        <tr><td><strong>成功状态码</strong></td><td>201 Created</td></tr>
+                        <tr><td><strong>响应字段</strong></td><td>商品信息、库位信息、入库数量、SKU库存统计</td></tr>
+                        <tr><td><strong>业务规则</strong></td><td>商品必须预先存在，库位可自动创建，SKU可自动创建</td></tr>
+                        <tr><td><strong>错误状态码</strong></td><td>400(参数错误), 404(商品不存在), 500(服务器错误)</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 出库操作 -->
+        <div id="outbound" class="section">
+            <h2>📤 出库操作</h2>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-url">/outbound</span>
+                </div>
+                <div class="endpoint-description">商品出库操作</div>
+                <div class="params">
+                    <h4>请求参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>sku_code</td><td>string</td><td class="required">是</td><td>SKU编码（格式："商品编码-颜色-尺寸"）</td></tr>
+                        <tr><td>location_code</td><td>string</td><td class="required">是</td><td>库位编码（如："A01-01-01"）</td></tr>
+                        <tr><td>outbound_quantity</td><td>number</td><td class="required">是</td><td>出库数量（必须大于0）</td></tr>
+                        <tr><td>batch_number</td><td>string</td><td class="optional">否</td><td>批次号</td></tr>
+                        <tr><td>operator_id</td><td>string</td><td class="optional">否</td><td>操作人ID</td></tr>
+                        <tr><td>notes</td><td>string</td><td class="optional">否</td><td>备注信息</td></tr>
+                        <tr><td>is_urgent</td><td>boolean</td><td class="optional">否</td><td>是否紧急出库，默认false</td></tr>
+                    </table>
+                </div>
+                
+                <div class="params">
+                    <h4>📤 接收参数示例:</h4>
+                    <pre><code>POST /api/outbound
+Content-Type: application/json
+Authorization: Bearer your_jwt_token
+
+{
+  "sku_code": "SHIRT-001-红-L",
+  "location_code": "A01-01-01",
+  "outbound_quantity": 30,
+  "batch_number": "BATCH20241201",
+  "operator_id": "user123",
+  "notes": "客户订单出库",
+  "is_urgent": false
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 成功响应 (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "inventory": {
+    "product_code": "SHIRT-001",
+    "product_name": "SHIRT-001",
+    "location_code": "A01-01-01",
+    "outbound_quantity": 30,
+    "sku_code": "SHIRT-001-红-L",
+    "sku_color": "红", 
+    "sku_size": "L",
+    "sku_location_quantity": 120,
+    "sku_total_quantity": 350
+  }
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>响应字段说明:</h4>
+                    <table class="param-table">
+                        <tr><th>字段名</th><th>类型</th><th>说明</th></tr>
+                        <tr><td>product_code</td><td>string</td><td>商品编码（从SKU解析）</td></tr>
+                        <tr><td>product_name</td><td>string</td><td>商品名称</td></tr>
+                        <tr><td>location_code</td><td>string</td><td>库位编码</td></tr>
+                        <tr><td>outbound_quantity</td><td>number</td><td>本次出库数量</td></tr>
+                        <tr><td>sku_code</td><td>string</td><td>完整SKU编码</td></tr>
+                        <tr><td>sku_color</td><td>string</td><td>SKU颜色</td></tr>
+                        <tr><td>sku_size</td><td>string</td><td>SKU尺寸</td></tr>
+                        <tr><td>sku_location_quantity</td><td>number</td><td>该SKU在当前库位的剩余数量</td></tr>
+                        <tr><td>sku_total_quantity</td><td>number</td><td>该SKU在所有库位的剩余总数量</td></tr>
+                    </table>
+                </div>
+                
+                <div class="warning">
+                    <div class="warning-title">❌ 错误响应示例</div>
+                    <pre><code>// 1. 商品不存在 (404 Not Found)
+{
+  "success": false,
+  "error_code": "PRODUCT_NOT_FOUND",
+  "error_message": "商品不存在：SHIRT-001"
+}
+
+// 2. SKU库存不足 (400 Bad Request)
+{
+  "success": false,
+  "error_code": "INSUFFICIENT_STOCK",
+  "error_message": "SKU库存不足，当前库存: 20, 需要: 30"
+}
+
+// 3. SKU不存在 (404 Not Found)
+{
+  "success": false,
+  "error_code": "SKU_NOT_FOUND",
+  "error_message": "该SKU在指定库位没有库存"
+}</code></pre>
+                </div>
+                
+                <div class="success">
+                    <div class="success-title">📋 接收和响应总结</div>
+                    <table class="param-table">
+                        <tr><th>项目</th><th>说明</th></tr>
+                        <tr><td><strong>接收方式</strong></td><td>POST请求，Content-Type: application/json</td></tr>
+                        <tr><td><strong>必填参数</strong></td><td>sku_code, location_code, outbound_quantity</td></tr>
+                        <tr><td><strong>可选参数</strong></td><td>batch_number, operator_id, notes, is_urgent</td></tr>
+                        <tr><td><strong>成功状态码</strong></td><td>200 OK</td></tr>
+                        <tr><td><strong>响应字段</strong></td><td>商品信息、库位信息、出库数量、SKU库存统计</td></tr>
+                        <tr><td><strong>业务规则</strong></td><td>商品和SKU必须存在，自动检查库存是否充足</td></tr>
+                        <tr><td><strong>错误状态码</strong></td><td>400(库存不足), 404(商品/SKU不存在), 500(服务器错误)</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 库位管理 -->
+        <div id="locations" class="section">
+            <h2>📍 库位管理</h2>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-url">/locations</span>
+                </div>
+                <div class="endpoint-description">获取所有库位列表</div>
+                <div class="params">
+                    <h4>查询参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>page</td><td>number</td><td class="optional">否</td><td>页码，默认1</td></tr>
+                        <tr><td>page_size</td><td>number</td><td class="optional">否</td><td>每页数量，默认50</td></tr>
+                        <tr><td>search</td><td>string</td><td class="optional">否</td><td>搜索关键词（库位编码或名称）</td></tr>
+                        <tr><td>category_code_1</td><td>string</td><td class="optional">否</td><td>按一级分类筛选</td></tr>
+                        <tr><td>is_defective</td><td>boolean</td><td class="optional">否</td><td>是否只显示次品库位</td></tr>
+                    </table>
+                </div>
+                
+                <div class="params">
+                    <h4>📤 请求示例:</h4>
+                    <pre><code>GET /api/locations
+GET /api/locations?page=1&page_size=20
+GET /api/locations?search=A01
+GET /api/locations?category_code_1=FP&is_defective=false</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 成功响应 (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "data": [
+    {
+      "location_id": "64f9a1b2c3d4e5f6789abc01",
+      "location_code": "A01-01-01",
+      "location_name": "A区第1行第1列第1层",
+      "category_code_1": "FP",
+      "category_name_1": "成品区",
+      "category_code_2": "CL",
+      "category_name_2": "服装类",
+      "description": "主要存放成品服装的标准库位",
+      "priority": 1,
+      "is_defective": false,
+      "created_at": "2024-12-01T10:30:00Z",
+      "updated_at": "2024-12-01T10:30:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "page_size": 50,
+    "total": 1,
+    "total_pages": 1
+  },
+  "error_code": null,
+  "error_message": null
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-url">/locations/:id</span>
+                </div>
+                <div class="endpoint-description">根据ID获取单个库位详情</div>
+                <div class="params">
+                    <h4>路径参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>id</td><td>string</td><td class="required">是</td><td>库位ID（MongoDB ObjectId）</td></tr>
+                    </table>
+                </div>
+                
+                <div class="params">
+                    <h4>📤 请求示例:</h4>
+                    <pre><code>GET /api/locations/64f9a1b2c3d4e5f6789abc01</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 成功响应 (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "data": {
+    "location_id": "64f9a1b2c3d4e5f6789abc01",
+    "location_code": "A01-01-01",
+    "location_name": "A区第1行第1列第1层",
+    "category_code_1": "FP",
+    "category_name_1": "成品区",
+    "category_code_2": "CL",
+    "category_name_2": "服装类",
+    "description": "主要存放成品服装的标准库位",
+    "priority": 1,
+    "is_defective": false,
+    "created_at": "2024-12-01T10:30:00Z",
+    "updated_at": "2024-12-01T10:30:00Z"
+  },
+  "error_code": null,
+  "error_message": null
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-url">/locations/code/:location_code</span>
+                </div>
+                <div class="endpoint-description">根据库位编码获取库位详情</div>
+                <div class="params">
+                    <h4>路径参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>location_code</td><td>string</td><td class="required">是</td><td>库位编码</td></tr>
+                    </table>
+                </div>
+                
+                <div class="params">
+                    <h4>📤 请求示例:</h4>
+                    <pre><code>GET /api/locations/code/A01-01-01</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 成功响应 (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "data": {
+    "location_id": "64f9a1b2c3d4e5f6789abc01",
+    "location_code": "A01-01-01",
+    "location_name": "A区第1行第1列第1层",
+    "category_code_1": "FP",
+    "category_name_1": "成品区",
+    "category_code_2": "CL",
+    "category_name_2": "服装类",
+    "description": "主要存放成品服装的标准库位",
+    "priority": 1,
+    "is_defective": false,
+    "created_at": "2024-12-01T10:30:00Z",
+    "updated_at": "2024-12-01T10:30:00Z"
+  },
+  "error_code": null,
+  "error_message": null
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-url">/locations</span>
+                </div>
+                <div class="endpoint-description">创建新库位</div>
+                <div class="params">
+                    <h4>请求参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>location_code</td><td>string</td><td class="required">是</td><td>库位编码（唯一）</td></tr>
+                        <tr><td>location_name</td><td>string</td><td class="optional">否</td><td>库位名称，默认使用编码</td></tr>
+                        <tr><td>description</td><td>string</td><td class="optional">否</td><td>库位描述</td></tr>
+                        <tr><td>priority</td><td>number</td><td class="optional">否</td><td>优先级（默认0）</td></tr>
+                        <tr><td>is_defective</td><td>boolean</td><td class="optional">否</td><td>是否为次品库位（默认false）</td></tr>
+                        <tr><td>operator_id</td><td>string</td><td class="required">是</td><td>操作人ID</td></tr>
+                        <tr><td>notes</td><td>string</td><td class="optional">否</td><td>创建备注</td></tr>
+                        <tr><td>is_urgent</td><td>boolean</td><td class="optional">否</td><td>是否紧急创建，默认false</td></tr>
+                    </table>
+                    
+                    <div class="note">
+                        <div class="note-title">📋 API命名规范</div>
+                        <p><strong>严格按照 API-NAMING-STANDARD.md 规范：</strong></p>
+                        <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                            <li>统一使用 <strong>snake_case</strong> 命名法</li>
+                            <li>禁止使用简化字段名（如 code, name）</li>
+                            <li>禁止字段名兜底写法，缺少标准字段时必须报错</li>
+                            <li>所有字段名必须与后端、数据库保持完全一致</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="note">
+                    <div class="note-title">🏷️ 分类字段说明</div>
+                    <p><strong>一级分类和二级分类：</strong>用于组织和管理库位的层级结构</p>
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                        <li><strong>一级分类：</strong>如"成品区"、"半成品区"、"次品区"、"退货区"</li>
+                        <li><strong>二级分类：</strong>如"服装类"、"鞋类"、"配件类"、"特殊商品"</li>
+                        <li><strong>编码规范：</strong>建议使用简短有意义的编码，如"FP"(成品)、"CL"(服装)</li>
+                    </ul>
+                </div>
+                
+                <div class="params">
+                    <h4>📤 请求示例:</h4>
+                    <pre><code>POST /api/locations
+Content-Type: application/json
+Authorization: Bearer your_jwt_token
+
+{
+  "location_code": "A01-01-01",
+  "location_name": "A区第1行第1列第1层",
+  "description": "主要存放成品服装的标准库位",
+  "priority": 1,
+  "is_defective": false,
+  "operator_id": "user123",
+  "notes": "新库位创建",
+  "is_urgent": false
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 成功响应 (201 Created):</h4>
+                    <pre><code>{
+  "success": true,
+  "data": {
+    "location_id": "64f9a1b2c3d4e5f6789abc01",
+    "location_code": "A01-01-01",
+    "location_name": "A区第1行第1列第1层",
+    "category_code_1": "FP",
+    "category_name_1": "成品区",
+    "category_code_2": "CL", 
+    "category_name_2": "服装类",
+    "description": "主要存放成品服装的标准库位",
+    "priority": 1,
+    "is_defective": false,
+    "created_at": "2024-12-01T10:30:00Z",
+    "operated_at": "2024-12-01T10:30:00Z",
+    "operator_id": "user123",
+    "notes": "新库位创建",
+    "is_urgent": false
+  },
+  "error_code": null,
+  "error_message": null
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>响应字段说明:</h4>
+                    <table class="param-table">
+                        <tr><th>字段名</th><th>类型</th><th>说明</th></tr>
+                        <tr><td>location_id</td><td>string</td><td>库位唯一标识ID</td></tr>
+                        <tr><td>location_code</td><td>string</td><td>库位编码</td></tr>
+                        <tr><td>location_name</td><td>string</td><td>库位名称</td></tr>
+                        <tr><td>category_code_1</td><td>string</td><td>一级分类编码</td></tr>
+                        <tr><td>category_name_1</td><td>string</td><td>一级分类名称</td></tr>
+                        <tr><td>category_code_2</td><td>string</td><td>二级分类编码</td></tr>
+                        <tr><td>category_name_2</td><td>string</td><td>二级分类名称</td></tr>
+                        <tr><td>description</td><td>string</td><td>库位描述</td></tr>
+                        <tr><td>priority</td><td>number</td><td>优先级</td></tr>
+                        <tr><td>is_defective</td><td>boolean</td><td>是否为次品库位</td></tr>
+                        <tr><td>created_at</td><td>string</td><td>创建时间（ISO格式）</td></tr>
+                        <tr><td>operated_at</td><td>string</td><td>操作时间（ISO格式）</td></tr>
+                        <tr><td>operator_id</td><td>string</td><td>操作人ID</td></tr>
+                        <tr><td>notes</td><td>string</td><td>创建备注</td></tr>
+                        <tr><td>is_urgent</td><td>boolean</td><td>是否紧急创建</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method put">PUT</span>
+                    <span class="endpoint-url">/locations/:id</span>
+                </div>
+                <div class="endpoint-description">更新库位信息</div>
+                <div class="params">
+                    <h4>路径参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>id</td><td>string</td><td class="required">是</td><td>库位ID（MongoDB ObjectId）</td></tr>
+                    </table>
+                </div>
+                
+                <div class="params">
+                    <h4>请求参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>operator_id</td><td>string</td><td class="required">是</td><td>操作人ID</td></tr>
+                        <tr><td>location_name</td><td>string</td><td class="optional">否</td><td>库位名称</td></tr>
+                        <tr><td>description</td><td>string</td><td class="optional">否</td><td>库位描述</td></tr>
+                        <tr><td>priority</td><td>number</td><td class="optional">否</td><td>优先级</td></tr>
+                        <tr><td>is_defective</td><td>boolean</td><td class="optional">否</td><td>是否为次品库位</td></tr>
+                        <tr><td>notes</td><td>string</td><td class="optional">否</td><td>更新备注</td></tr>
+                        <tr><td>is_urgent</td><td>boolean</td><td class="optional">否</td><td>是否紧急更新，默认false</td></tr>
+                    </table>
+                </div>
+                
+                <div class="params">
+                    <h4>📤 请求示例:</h4>
+                    <pre><code>PUT /api/locations/64f9a1b2c3d4e5f6789abc01
+Content-Type: application/json
+Authorization: Bearer your_jwt_token
+
+{
+  "location_name": "A区第1行第1列第1层（升级版）",
+  "description": "升级后的主要成品服装存放库位",
+  "priority": 2,
+  "is_defective": false,
+  "operator_id": "user123",
+  "notes": "库位升级改造完成"
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 成功响应 (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "data": {
+    "location_id": "64f9a1b2c3d4e5f6789abc01",
+    "location_code": "A01-01-01",
+    "location_name": "A区第1行第1列第1层（升级版）",
+    "category_code_1": "FP",
+    "category_name_1": "成品区",
+    "category_code_2": "CL",
+    "category_name_2": "服装类",
+    "description": "升级后的主要成品服装存放库位",
+    "priority": 2,
+    "is_defective": false,
+    "created_at": "2024-12-01T10:30:00Z",
+    "updated_at": "2024-12-01T15:30:00Z",
+    "operated_at": "2024-12-01T15:30:00Z",
+    "operator_id": "user123",
+    "notes": "库位升级改造完成",
+    "is_urgent": false
+  },
+  "error_code": null,
+  "error_message": null
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method delete">DELETE</span>
+                    <span class="endpoint-url">/locations/:id</span>
+                </div>
+                <div class="endpoint-description">删除库位（安全删除，有库存时拒绝）</div>
+                
+                <div class="warning">
+                    <div class="warning-title">⚠️ 安全限制</div>
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                        <li><strong>库存检查</strong>：有库存的库位不能删除</li>
+                        <li><strong>级联删除</strong>：删除库位时会自动清理所有相关记录</li>
+                        <li><strong>不可恢复</strong>：删除操作无法撤销，请谨慎操作</li>
+                    </ul>
+                </div>
+                
+                <div class="params">
+                    <h4>路径参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>id</td><td>string</td><td class="required">是</td><td>库位ID（MongoDB ObjectId）</td></tr>
+                    </table>
+                </div>
+                
+                <div class="params">
+                    <h4>请求参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>operator_id</td><td>string</td><td class="required">是</td><td>操作人ID</td></tr>
+                        <tr><td>notes</td><td>string</td><td class="optional">否</td><td>删除原因说明</td></tr>
+                        <tr><td>is_urgent</td><td>boolean</td><td class="optional">否</td><td>是否紧急删除，默认false</td></tr>
+                    </table>
+                </div>
+                
+                <div class="params">
+                    <h4>📤 请求示例:</h4>
+                    <pre><code>DELETE /api/locations/64f9a1b2c3d4e5f6789abc01
+Content-Type: application/json
+Authorization: Bearer your_jwt_token
+
+{
+  "operator_id": "user123",
+  "notes": "库位改造，清理旧库位",
+  "is_urgent": false
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 成功响应 (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "data": {
+    "location_id": "64f9a1b2c3d4e5f6789abc01",
+    "operated_at": "2024-12-01T15:30:00Z",
+    "operator_id": "user123",
+    "notes": "库位改造，清理旧库位",
+    "is_urgent": false
+  },
+  "error_code": null,
+  "error_message": null
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 库存检查失败响应 (400 Bad Request):</h4>
+                    <pre><code>{
+  "success": false,
+  "data": {
+    "location_id": "64f9a1b2c3d4e5f6789abc01",
+    "location_code": "A01-01-01",
+    "stock_count": 5
+  },
+  "error_code": "LOCATION_HAS_STOCK",
+  "error_message": "库位还有库存，不能删除"
+}</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- 库存管理 -->
+        <div id="inventory" class="section">
+            <h2>📊 库存管理</h2>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-url">/inventory/location</span>
+                </div>
+                <div class="endpoint-description"><strong>🔧 统一库位查询接口</strong> - 支持查询所有库位或指定库位</div>
+                <div class="params">
+                    <h4>查询参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>location_code</td><td>string</td><td class="optional">否</td><td>指定库位编码，不传则查询所有库位</td></tr>
+                        <tr><td>page</td><td>number</td><td class="optional">否</td><td>页码，默认1</td></tr>
+                        <tr><td>page_size</td><td>number</td><td class="optional">否</td><td>每页数量，默认50</td></tr>
+                        <tr><td>has_stock_only</td><td>string</td><td class="optional">否</td><td>是否只显示有库存的商品，默认"true"</td></tr>
+                    </table>
+                </div>
+                
+                <div class="note">
+                    <div class="note-title">💡 使用示例</div>
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                        <li><code>GET /api/inventory/location</code> - 查询所有库位（支持分页）</li>
+                        <li><code>GET /api/inventory/location?location_code=A01</code> - 查询A01库位</li>
+                        <li><code>GET /api/inventory/location/A01</code> - RESTful风格查询（效果相同）</li>
+                    </ul>
+                </div>
+                
+                <div class="params">
+                    <h4>📤 请求示例:</h4>
+                    <pre><code>GET /api/inventory/location
+GET /api/inventory/location?location_code=A01-01-01
+GET /api/inventory/location?page=2&page_size=20&has_stock_only=false</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 成功响应 - 查询所有库位 (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "data": {
+    "location_code": null,
+    "items": [
+      {
+        "location_code": "A01-01-01",
+        "product_id": "64f9a1b2c3d4e5f6789abc01",
+        "product_code": "SHIRT-001",
+        "product_name": "经典衬衫",
+        "sku_code": "SHIRT-001-红-L",
+        "sku_color": "红",
+        "sku_size": "L",
+        "stock_quantity": 100,
+        "image_path": "/uploads/shirt-red.jpg"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "page_size": 50,
+      "total_pages": 1,
+      "total_items": 1
+    },
+    "summary": {
+      "total_items": 1,
+      "total_quantity": 100
+    }
+  },
+  "error_code": null,
+  "error_message": null
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>📥 成功响应 - 查询指定库位 (200 OK):</h4>
+                    <pre><code>{
+  "success": true,
+  "data": {
+    "location_code": "A01-01-01",
+    "items": [
+      {
+        "location_code": "A01-01-01",
+        "product_id": "64f9a1b2c3d4e5f6789abc01",
+        "product_code": "SHIRT-001",
+        "product_name": "经典衬衫",
+        "sku_code": "SHIRT-001-红-L",
+        "sku_color": "红",
+        "sku_size": "L",
+        "stock_quantity": 100,
+        "image_path": "/uploads/shirt-red.jpg"
+      }
+    ],
+    "summary": {
+      "total_items": 1,
+      "total_quantity": 100
+    }
+  },
+  "error_code": null,
+  "error_message": null
+}</code></pre>
+                </div>
+                
+                <div class="params">
+                    <h4>响应字段说明:</h4>
+                    <table class="param-table">
+                        <tr><th>字段名</th><th>类型</th><th>说明</th></tr>
+                        <tr><td>location_code</td><td>string</td><td>查询的库位编码，null表示查询所有库位</td></tr>
+                        <tr><td>items</td><td>array</td><td>库存项目列表</td></tr>
+                        <tr><td>items[].location_code</td><td>string</td><td>库位编码</td></tr>
+                        <tr><td>items[].product_id</td><td>string</td><td>商品ID</td></tr>
+                        <tr><td>items[].product_code</td><td>string</td><td>商品编码</td></tr>
+                        <tr><td>items[].product_name</td><td>string</td><td>商品名称</td></tr>
+                        <tr><td>items[].sku_code</td><td>string</td><td>SKU编码</td></tr>
+                        <tr><td>items[].sku_color</td><td>string</td><td>SKU颜色</td></tr>
+                        <tr><td>items[].sku_size</td><td>string</td><td>SKU尺寸</td></tr>
+                        <tr><td>items[].stock_quantity</td><td>number</td><td>库存数量</td></tr>
+                        <tr><td>items[].image_path</td><td>string</td><td>商品图片路径</td></tr>
+                        <tr><td>pagination</td><td>object</td><td>分页信息（仅查询所有库位时有）</td></tr>
+                        <tr><td>summary</td><td>object</td><td>统计信息</td></tr>
+                        <tr><td>summary.total_items</td><td>number</td><td>总项目数</td></tr>
+                        <tr><td>summary.total_quantity</td><td>number</td><td>总数量</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-url">/inventory/location/:location_code</span>
+                </div>
+                <div class="endpoint-description"><strong>📍 RESTful风格库位查询</strong> - 与查询参数方式效果相同</div>
+                <div class="params">
+                    <h4>路径参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>location_code</td><td>string</td><td class="required">是</td><td>库位编码</td></tr>
+                    </table>
+                </div>
+                
+                <div class="params">
+                    <h4>查询参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>has_stock_only</td><td>string</td><td class="optional">否</td><td>是否只显示有库存的商品，默认"true"</td></tr>
+                    </table>
+                </div>
+                
+                <div class="params">
+                    <h4>📤 请求示例:</h4>
+                    <pre><code>GET /api/inventory/location/A01-01-01
+GET /api/inventory/location/A01-01-01?has_stock_only=false</code></pre>
+                </div>
+                
+                <div class="note">
+                    <div class="note-title">💡 两种语法说明</div>
+                    <p>以下两种写法完全等效：</p>
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                        <li><code>GET /api/inventory/location?location_code=A01-01-01</code></li>
+                        <li><code>GET /api/inventory/location/A01-01-01</code></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- /inventory/by-product 接口已删除 -->
+            <div class="note">
+                <div class="note-title">🗑️ 已删除的接口</div>
+                <p><strong>GET /inventory/by-product</strong> - 此接口已完全删除，其功能已整合到 <code>/products</code> 接口中</p>
+                <p>如需查询商品库存信息，请使用 <strong>GET /api/products</strong></p>
+            </div>
+        </div>
+
+        <!-- 外部条码管理 -->
+        <div id="external-codes" class="section">
+            <h2>🔗 外部条码管理</h2>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-url">/sku/:sku_code/external-codes</span>
+                </div>
+                <div class="endpoint-description">获取指定SKU的所有外部条码</div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-url">/sku/:sku_code/external-codes</span>
+                </div>
+                <div class="endpoint-description">为SKU添加外部条码</div>
+                <div class="params">
+                    <h4>请求参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>external_code</td><td>string</td><td class="required">是</td><td>外部条码</td></tr>
+                        <tr><td>operator_id</td><td>string</td><td class="required">是</td><td>操作人ID</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-url">/sku/external/:external_code</span>
+                </div>
+                <div class="endpoint-description">根据外部条码查找对应的SKU</div>
+            </div>
+        </div>
+
+        <!-- 文件上传 -->
+        <div id="upload" class="section">
+            <h2>🖼️ 文件上传</h2>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-url">/upload/image</span>
+                </div>
+                <div class="endpoint-description">上传图片文件</div>
+                <div class="params">
+                    <h4>请求参数:</h4>
+                    <table class="param-table">
+                        <tr><th>参数名</th><th>类型</th><th>必需</th><th>说明</th></tr>
+                        <tr><td>image</td><td>file</td><td class="required">是</td><td>图片文件（multipart/form-data）</td></tr>
+                    </table>
+                </div>
+                <div class="note">
+                    <div class="note-title">📷 支持格式</div>
+                    <p>支持 JPG、JPEG、PNG、GIF 格式，最大文件大小 10MB</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 错误代码说明 -->
+        <div class="section">
+            <h2>⚠️ 错误代码说明</h2>
+            
+            <table class="param-table">
+                <tr><th>错误代码</th><th>HTTP状态码</th><th>说明</th></tr>
+                <tr><td>INVALID_PARAMETERS</td><td>400</td><td>请求参数无效或缺失</td></tr>
+                <tr><td>UNAUTHORIZED</td><td>401</td><td>未认证或令牌无效</td></tr>
+                <tr><td>FORBIDDEN</td><td>403</td><td>权限不足</td></tr>
+                <tr><td>NOT_FOUND</td><td>404</td><td>资源不存在</td></tr>
+                <tr><td>DUPLICATE_ENTRY</td><td>409</td><td>资源冲突（如编码重复）</td></tr>
+                <tr><td>INSUFFICIENT_STOCK</td><td>400</td><td>库存不足</td></tr>
+                <tr><td>API_DEPRECATED</td><td>410</td><td>接口已废弃</td></tr>
+                <tr><td>INTERNAL_ERROR</td><td>500</td><td>服务器内部错误</td></tr>
+            </table>
+        </div>
+
+        <!-- 最佳实践 -->
+        <div class="section">
+            <h2>💡 最佳实践建议</h2>
+            
+            <div class="success">
+                <div class="success-title">✅ 推荐做法</div>
+                <ul>
+                    <li><strong>严格遵循命名规范：</strong>使用 snake_case，避免 camelCase</li>
+                    <li><strong>必传操作员ID：</strong>所有修改操作都要传递 operator_id</li>
+                    <li><strong>使用推荐接口：</strong>库存查询使用 by-product 或 by-location</li>
+                    <li><strong>错误处理：</strong>根据 error_code 进行业务逻辑判断</li>
+                    <li><strong>分页查询：</strong>大数据量查询时使用分页参数</li>
+                </ul>
+            </div>
+
+            <div class="warning">
+                <div class="warning-title">❌ 避免的做法</div>
+                <ul>
+                    <li>使用已废弃的接口</li>
+                    <li>字段名兜底写法（如用 sku_code 代替 product_code）</li>
+                    <li>忽略 operator_id 字段</li>
+                    <li>在高并发场景下不检查库存</li>
+                    <li>混用不同的命名风格</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

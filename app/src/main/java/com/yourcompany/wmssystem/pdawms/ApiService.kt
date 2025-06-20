@@ -16,7 +16,7 @@ interface ApiService {
     @GET("api/products")
     suspend fun getProducts(
         @Query("page") page: Int = 1,
-        @Query("pageSize") pageSize: Int = 1000
+        @Query("page_size") page_size: Int = 1000
     ): Response<ApiResponse<List<Product>>>
     
     @GET("api/products/code/{code}")
@@ -25,8 +25,8 @@ interface ApiService {
     @GET("api/products/external-code/{code}")
     suspend fun getProductByExternalCode(@Path("code") code: String): Response<ApiResponse<Product>>
     
-    @GET("api/products/{productId}")
-    suspend fun getProductById(@Path("productId") productId: String): Response<ApiResponse<Product>>
+    @GET("api/products/{product_id}")
+    suspend fun getProductById(@Path("product_id") product_id: String): Response<ApiResponse<Product>>
     
     // 库存查询
     @GET("api/inventory/by-location")
@@ -35,7 +35,7 @@ interface ApiService {
     @GET("api/inventory/by-product")
     suspend fun getInventoryByProduct(
         @Query("page") page: Int = 1,
-        @Query("pageSize") pageSize: Int = 1000,
+        @Query("page_size") page_size: Int = 1000,
         @Query("code") code: String? = null
     ): Response<ApiResponse<List<Product>>>
     
@@ -56,15 +56,15 @@ interface ApiService {
     suspend fun transferInventory(@Body request: InventoryTransferRequest): Response<ApiResponse<InventoryTransferResponse>>
     
     // SKU外部条码管理
-    @GET("api/sku/{skuCode}/external-codes")
-    suspend fun getSkuExternalCodes(@Path("skuCode") skuCode: String): Response<ApiResponse<List<String>>>
+    @GET("api/sku/{sku_code}/external-codes")
+    suspend fun getSkuExternalCodes(@Path("sku_code") sku_code: String): Response<ApiResponse<List<String>>>
     
-    @POST("api/sku/{skuCode}/external-codes")
+    @POST("api/sku/{sku_code}/external-codes")
     suspend fun addSkuExternalCode(
-        @Path("skuCode") skuCode: String,
+        @Path("sku_code") sku_code: String,
         @Body externalCode: Map<String, String>
     ): Response<ApiResponse<Any>>
     
-    @GET("api/sku/external/{externalCode}")
-    suspend fun getSkuByExternalCode(@Path("externalCode") externalCode: String): Response<ApiResponse<SkuInfo>>
+    @GET("api/sku/external/{external_code}")
+    suspend fun getSkuByExternalCode(@Path("external_code") external_code: String): Response<ApiResponse<SkuInfo>>
 } 

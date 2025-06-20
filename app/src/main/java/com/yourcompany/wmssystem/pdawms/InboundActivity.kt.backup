@@ -48,12 +48,70 @@ data class ProductData(
     val pagination: Pagination?
 )
 
+data class Product(
+    val product_id: String,
+    val product_code: String,
+    val product_name: String,
+    val unit: String,
+    val image_path: String?,
+    val has_sku: Boolean,
+    val category_code_1: String,
+    val category_name_1: String,
+    val category_code_2: String,
+    val category_name_2: String,
+    val description: String,
+    val product_total_quantity: Int,
+    val total_sku_count: Int,
+    val total_location_count: Int,
+    val total_color_count: Int,
+    val colors: List<ColorInfo>?,
+    val skus: List<SkuInfo>?,
+    val created_at: String,
+    val updated_at: String
+)
 
+data class ColorInfo(
+    val color: String,
+    val image_path: String?,
+    val color_total_quantity: Int,
+    val total_sku_count: Int,
+    val total_location_count: Int,
+    val sizes: List<SkuInfo>?
+)
 
+data class SkuInfo(
+    val sku_size: String?,
+    val sku_code: String,
+    val sku_color: String?,
+    val sku_total_quantity: Int,
+    val locations: List<LocationInfo>?,
+    val image_path: String?
+)
 
+data class LocationInfo(
+    val location_code: String,
+    val stock_quantity: Int
+)
 
+data class Pagination(
+    val current_page: Int,
+    val page_size: Int,
+    val total_count: Int,
+    val total_pages: Int,
+    val has_next_page: Boolean,
+    val has_prev_page: Boolean
+)
 
 // 新的入库请求模型
+data class InboundRequest(
+    val sku_code: String,
+    val location_code: String?,
+    val inbound_quantity: Int,
+    val batch_number: String? = null,
+    val operator_id: String? = null,
+    val notes: String? = null,
+    val is_urgent: Boolean = false
+)
 
 // 新的入库响应模型
 data class InboundResponse(

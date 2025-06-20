@@ -587,7 +587,7 @@ class OutboundActivity : AppCompatActivity() {
                                     Log.d("WMS_OUTBOUND", "🔍 查询库存分布: /inventory/by-product?code=$extractedProductCode")
                                     val inventoryResponse = ApiClient.getApiService().getInventoryByProduct(
                                         page = 1,
-                                        pageSize = 1000,
+                                        page_size = 1000,  // 更新为snake_case
                                         code = extractedProductCode
                                     )
                                     
@@ -618,7 +618,7 @@ class OutboundActivity : AppCompatActivity() {
                     
                     // 4️⃣ 兜底：尝试SKU外部条码查询
                     try {
-                        Log.d("WMS_OUTBOUND", "🔍 兜底查询: /sku/external-code/$productCode")
+                        Log.d("WMS_OUTBOUND", "🔍 兜底查询: /sku/external/$productCode")  // 更新路径
                         val skuResponse = ApiClient.getApiService().getSkuByExternalCode(productCode)
                         if (skuResponse.isSuccessful) {
                             val skuApiResponse = skuResponse.body()
@@ -641,7 +641,7 @@ class OutboundActivity : AppCompatActivity() {
                     try {
                         val inventoryResponse = ApiClient.getApiService().getInventoryByProduct(
                             page = 1,
-                            pageSize = 1000,
+                            page_size = 1000,  // 更新为snake_case
                             code = productCode
                         )
                         
@@ -808,11 +808,11 @@ class OutboundActivity : AppCompatActivity() {
             productData.colors?.forEach { colorData ->
                 Log.d("WMS_OUTBOUND", "🎨 检查颜色: ${colorData.color}, 有 ${colorData.sizes?.size ?: 0} 个尺码")
                 colorData.sizes?.forEach { sizeData ->
-                    Log.d("WMS_OUTBOUND", "📏 检查SKU: ${sizeData.sku_code}, 库存: ${sizeData.total_quantity ?: 0}")
+                    Log.d("WMS_OUTBOUND", "📏 检查SKU: ${sizeData.sku_code}, 库存: ${sizeData.sku_total_quantity ?: 0}")
                     if (sizeData.sku_code == targetSku) {
                         foundTargetSku = true
                         Log.d("WMS_OUTBOUND", "🎯 找到目标SKU: $targetSku")
-                        val totalStock = sizeData.total_quantity ?: 0
+                        val totalStock = sizeData.sku_total_quantity ?: 0
                         
                         if (totalStock == 0) {
                             Toast.makeText(this@OutboundActivity, "SKU $targetSku 库存为0，无法出库", Toast.LENGTH_SHORT).show()
@@ -987,7 +987,7 @@ class OutboundActivity : AppCompatActivity() {
                 
                 productData.colors?.forEach { colorData ->
                     colorData.sizes?.forEach { skuInfo ->
-                        val totalStock = skuInfo.total_quantity ?: 0
+                        val totalStock = skuInfo.sku_total_quantity ?: 0
                         if (totalStock > 0 && defaultSku == null) {
                             defaultSku = skuInfo
                             defaultColor = colorData.color
@@ -1003,7 +1003,7 @@ class OutboundActivity : AppCompatActivity() {
                 }
                 
                 if (defaultSku != null) {
-                    val totalStock = defaultSku!!.total_quantity ?: 0
+                    val totalStock = defaultSku!!.sku_total_quantity ?: 0
                     
                     // 检查预设数量是否超出总库存
                     if (presetQuantity > totalStock) {
@@ -1080,7 +1080,7 @@ class OutboundActivity : AppCompatActivity() {
                 }
             } else {
                 // 处理无SKU的商品 - 需要查询库存分布
-                val totalStock = productData.total_quantity ?: 0
+                val totalStock = productData.product_total_quantity ?: 0  // 修正：无SKU商品使用product_total_quantity
                 if (totalStock > 0) {
                     // 检查预设数量是否超出总库存
                     if (presetQuantity > totalStock) {
@@ -1198,17 +1198,15 @@ class OutboundActivity : AppCompatActivity() {
                     
                     Log.d("WMS_OUTBOUND", "🔧 构建出库请求: ${item.sku} -> location: ${item.location}, quantity: ${item.quantity}, color: ${item.color}, size: ${item.size}")
                     
+                    // 🔧 更新为新的API结构，使用snake_case字段名
                     OutboundRequest(
-                        product_id = item.productId,
-                        location_code = item.location,
-                        sku_code = item.sku,
-                        sku_color = item.color,
-                        sku_size = item.size,
-                        quantity = item.quantity,
+                        sku_code = item.sku,  // 主要字段
+                        location_code = if (item.location == "无货位") null else item.location,  // 无货位时传null
+                        stock_quantity = item.quantity,  // 更新字段名
+                        operator_id = userId,  // 必需字段
                         batch_number = if (item.batch.isNotEmpty()) item.batch else null,
-                        operator_id = userId,
                         is_urgent = false,
-                        notes = "PDA出库操作"
+                        notes = "PDA出库操作 - ${item.color} ${item.size}"
                     )
                 }
                 
