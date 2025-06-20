@@ -480,8 +480,8 @@ class OutboundActivity : AppCompatActivity() {
                 editProductCode -> {
                     editProductCode.setText(data)
                     Log.d("WMS_SCAN", "📦 扫码输入到商品编码框: $data")
-                    // 扫码后自动执行查询
-                    confirmProduct()
+                    // 扫码后自动执行查询，但不清空输入框
+                    smartQueryProduct(data, keepInput = true)
                 }
                 editQuantityInput -> {
                     editQuantityInput.setText(data)
@@ -491,223 +491,100 @@ class OutboundActivity : AppCompatActivity() {
                     // 如果焦点在其他地方，默认填入商品码输入框
                     editProductCode.setText(data)
                     Log.d("WMS_SCAN", "📦 扫码输入到默认商品编码框: $data")
-                    // 扫码后自动执行查询
-                    confirmProduct()
+                    // 扫码后自动执行查询，但不清空输入框
+                    smartQueryProduct(data, keepInput = true)
                 }
             }
         }
     }
 
-    private fun processImageUrl(rawImageUrl: String): String {
-        return if (rawImageUrl.isNotEmpty()) {
-            if (rawImageUrl.startsWith("http://") || rawImageUrl.startsWith("https://")) {
-                rawImageUrl
-            } else {
-                val baseUrl = ApiClient.getServerUrl(this)
-                "${baseUrl.trimEnd('/')}/$rawImageUrl"
-            }
-        } else {
-            ""
-        }
-    }
-
-    private fun setupClickListeners() {
-        btnConfirmProduct.setOnClickListener {
-            confirmProduct()
-        }
-        
-        btnConfirmOutbound.setOnClickListener {
-            confirmOutbound()
-        }
-    }
-    
-    private fun loadLocationOptions() {
-        lifecycleScope.launch {
-            try {
-                Log.d("WMS_OUTBOUND", "🏪 开始加载货位选项")
-                val response = ApiClient.getApiService().getInventoryByLocation()
-                
-                if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse?.success == true && apiResponse.data != null) {
-                        locationOptions.clear()
-                        locationOptions.add("无货位")
-                        
-                        // 提取所有唯一的库位代码
-                        val uniqueLocations = apiResponse.data
-                            .mapNotNull { it.location_code }
-                            .filter { it.isNotBlank() && it != "null" }
-                            .distinct()
-                            .sorted()
-                        
-                        locationOptions.addAll(uniqueLocations)
-                        Log.d("WMS_OUTBOUND", "✅ 货位选项加载成功: ${uniqueLocations.size} 个")
-                    } else {
-                        Log.w("WMS_OUTBOUND", "⚠️ 货位选项加载失败: ${apiResponse?.error_message}")
-                        loadDefaultLocations()
-                    }
-                } else {
-                    Log.w("WMS_OUTBOUND", "⚠️ API调用失败: ${response.code()}")
-                    loadDefaultLocations()
-                }
-            } catch (e: Exception) {
-                Log.e("WMS_OUTBOUND", "❌ 货位选项加载异常: ${e.message}")
-                loadDefaultLocations()
-            }
-        }
-    }
-    
-    private fun loadDefaultLocations() {
-        locationOptions.clear()
-        locationOptions.add("无货位")
-        locationOptions.add("A01-01-01")
-        locationOptions.add("A01-01-02")
-        locationOptions.add("B01-01-01")
-        locationOptions.add("西8排1架6层4位")
-        locationOptions.add("西8排2架6层4位")
-    }
-    
-    private fun confirmProduct() {
-        val productCode = editProductCode.text.toString().trim()
-        if (productCode.isEmpty()) {
-            Toast.makeText(this, "请输入商品编码", Toast.LENGTH_SHORT).show()
-            return
-        }
-        
-        Log.d("WMS_OUTBOUND", "🔍 开始查询商品: $productCode")
+    private fun smartQueryProduct(productCode: String, keepInput: Boolean = false) {
+        Log.d("WMS_OUTBOUND", "🔍 开始智能查询: $productCode")
         
         lifecycleScope.launch {
             try {
-                Log.d("WMS_OUTBOUND", "🔍 开始智能查询: '$productCode'")
-                Log.d("WMS_OUTBOUND", "🔍 输入内容检查: 长度=${productCode.length}, 包含-=${productCode.contains("-")}")
-                
+                // 1️⃣ 首先尝试SKU外部条码查询
                 if (productCode.contains("-")) {
-                    // 包含 "-" 的是SKU编码，按网页版逻辑：先提取商品代码查商品，再查库存
-                    val extractedProductCode = productCode.split("-")[0]
-                    Log.d("WMS_OUTBOUND", "📦 检测到SKU格式，提取商品代码: $productCode → $extractedProductCode")
-                    
-                    // 1️⃣ 先查询商品信息（使用提取的商品代码）
                     try {
-                        Log.d("WMS_OUTBOUND", "🔍 查询商品信息: /products/code/$extractedProductCode")
-                        val productResponse = ApiClient.getApiService().getProductByCode(extractedProductCode)
-                        
-                        if (productResponse.isSuccessful) {
-                            val productApiResponse = productResponse.body()
-                            if (productApiResponse?.success == true && productApiResponse.data != null) {
-                                // API现在返回单个Product对象，不是ProductListResponse
-                                val productData = productApiResponse.data
-                                Log.d("WMS_OUTBOUND", "✅ 商品查询成功: ${productData.product_name}")
-                                
-                                // 2️⃣ 查询该商品的库存分布
-                                try {
-                                    Log.d("WMS_OUTBOUND", "🔍 查询库存分布: /inventory/by-product?code=$extractedProductCode")
-                                    val inventoryResponse = ApiClient.getApiService().getInventoryByProduct(
-                                        page = 1,
-                                        page_size = 1000,  // 更新为snake_case
-                                        code = extractedProductCode
-                                    )
-                                    
-                                    if (inventoryResponse.isSuccessful) {
-                                        val inventoryApiResponse = inventoryResponse.body()
-                                        if (inventoryApiResponse?.success == true && inventoryApiResponse.data?.isNotEmpty() == true) {
-                                            val inventoryProductData = inventoryApiResponse.data.first()
-                                            Log.d("WMS_OUTBOUND", "✅ 库存查询成功，找到 ${inventoryProductData.colors?.size ?: 0} 种颜色")
-                                            handleProductDataWithTargetSku(inventoryProductData, productCode)
-                                            editProductCode.setText("")
-                                            return@launch
-                                        }
-                                    }
-                                } catch (e: Exception) {
-                                    Log.d("WMS_OUTBOUND", "库存查询失败: ${e.message}")
-                                }
-                                
-                                // 3️⃣ 如果库存查询失败，直接使用商品数据
-                                handleProductData(productData)
-                                editProductCode.setText("")
-                                return@launch
-                            }
-                        }
-                        Log.d("WMS_OUTBOUND", "商品查询失败或无数据")
-                    } catch (e: Exception) {
-                        Log.d("WMS_OUTBOUND", "商品查询异常: ${e.message}")
-                    }
-                    
-                    // 4️⃣ 兜底：尝试SKU外部条码查询
-                    try {
-                        Log.d("WMS_OUTBOUND", "🔍 兜底查询: /sku/external/$productCode")  // 更新路径
+                        Log.d("WMS_OUTBOUND", "🔍 尝试SKU外部条码查询: $productCode")
                         val skuResponse = ApiClient.getApiService().getSkuByExternalCode(productCode)
                         if (skuResponse.isSuccessful) {
                             val skuApiResponse = skuResponse.body()
                             if (skuApiResponse?.success == true && skuApiResponse.data != null) {
-                                Log.d("WMS_OUTBOUND", "✅ 兜底SKU查询成功: ${skuApiResponse.data.sku_code}")
+                                Log.d("WMS_OUTBOUND", "✅ SKU外部条码查询成功: ${skuApiResponse.data.sku_code}")
                                 handleSkuData(skuApiResponse.data)
-                                editProductCode.setText("")
+                                if (!keepInput) {
+                                    editProductCode.setText("")
+                                }
                                 return@launch
                             }
                         }
+                        Log.d("WMS_OUTBOUND", "SKU外部条码查询失败，尝试商品查询")
                     } catch (e: Exception) {
-                        Log.d("WMS_OUTBOUND", "兜底SKU查询失败: ${e.message}")
-                    }
-                    
-                } else {
-                    // 不包含 "-" 的是商品编码，优先查询商品相关API
-                    Log.d("WMS_OUTBOUND", "🏷️ 检测到商品格式(不含-): $productCode")
-                    
-                    // 1️⃣ 先尝试库存查询（作为商品编码）
-                    try {
-                        val inventoryResponse = ApiClient.getApiService().getInventoryByProduct(
-                            page = 1,
-                            page_size = 1000,  // 更新为snake_case
-                            code = productCode
-                        )
-                        
-                        if (inventoryResponse.isSuccessful) {
-                            val inventoryApiResponse = inventoryResponse.body()
-                            if (inventoryApiResponse?.success == true && inventoryApiResponse.data?.isNotEmpty() == true) {
-                                val productData = inventoryApiResponse.data.first()
-                                Log.d("WMS_OUTBOUND", "✅ 商品库存查询成功: ${productData.product_name}")
-                                handleProductData(productData)
-                                editProductCode.setText("")
-                                return@launch
-                            }
-                        }
-                    } catch (e: Exception) {
-                        Log.d("WMS_OUTBOUND", "商品库存查询失败: ${e.message}")
-                    }
-                    
-                    // 2️⃣ 尝试商品外部条码查询
-                    try {
-                        val productResponse = ApiClient.getApiService().getProductByExternalCode(productCode)
-                        if (productResponse.isSuccessful) {
-                            val productApiResponse = productResponse.body()
-                            if (productApiResponse?.success == true && productApiResponse.data != null) {
-                                // API现在返回单个Product对象，不是ProductListResponse
-                                val productData = productApiResponse.data
-                                Log.d("WMS_OUTBOUND", "✅ 商品外部条码查询成功: ${productData.product_name}")
-                                handleProductData(productData)
-                                editProductCode.setText("")
-                                return@launch
-                            }
-                        }
-                    } catch (e: Exception) {
-                        Log.d("WMS_OUTBOUND", "商品外部条码查询失败: ${e.message}")
+                        Log.d("WMS_OUTBOUND", "SKU外部条码查询异常: ${e.message}")
                     }
                 }
                 
-                // 3️⃣ 最后尝试通用外部条码查询（兜底）
+                // 2️⃣ 采用入库页面的逻辑：直接查询商品
+                val baseProductCode = productCode.split("-").firstOrNull() ?: productCode
+                Log.d("WMS_OUTBOUND", "📦 直接查询商品: $baseProductCode")
+                
                 try {
-                    val skuResponse = ApiClient.getApiService().getSkuByExternalCode(productCode)
-                    if (skuResponse.isSuccessful) {
-                        val skuApiResponse = skuResponse.body()
-                        if (skuApiResponse?.success == true && skuApiResponse.data != null) {
-                            Log.d("WMS_OUTBOUND", "✅ 兜底外部条码查询成功: ${skuApiResponse.data.sku_code}")
-                            handleSkuData(skuApiResponse.data)
-                            editProductCode.setText("")
+                    val productResponse = ApiClient.getApiService().getProductByCode(baseProductCode)
+                    if (productResponse.isSuccessful) {
+                        val productApiResponse = productResponse.body()
+                        if (productApiResponse?.success == true && productApiResponse.data != null) {
+                            val productData = productApiResponse.data
+                            Log.d("WMS_OUTBOUND", "✅ 商品查询成功: ${productData.product_name}")
+                            
+                            // 如果扫码的是完整SKU，解析目标SKU
+                            if (productCode.contains("-")) {
+                                val targetSku = productCode
+                                Log.d("WMS_OUTBOUND", "🔍 解析目标SKU: $targetSku")
+                                handleProductDataWithTargetSku(productData, targetSku)
+                            } else {
+                                // 扫码的是商品编码，使用普通处理
+                                handleProductData(productData)
+                            }
+                            
+                            if (!keepInput) {
+                                editProductCode.setText("")
+                            }
+                            return@launch
+                        }
+                    }
+                    Log.d("WMS_OUTBOUND", "商品查询失败")
+                } catch (e: Exception) {
+                    Log.d("WMS_OUTBOUND", "商品查询异常: ${e.message}")
+                }
+                
+                // 3️⃣ 尝试商品外部条码查询
+                try {
+                    val productResponse = ApiClient.getApiService().getProductByExternalCode(productCode)
+                    if (productResponse.isSuccessful) {
+                        val productApiResponse = productResponse.body()
+                        if (productApiResponse?.success == true && productApiResponse.data != null) {
+                            val productData = productApiResponse.data
+                            Log.d("WMS_OUTBOUND", "✅ 商品外部条码查询成功: ${productData.product_name}")
+                            
+                            // 如果扫码的是完整SKU，解析目标SKU
+                            if (productCode.contains("-")) {
+                                val targetSku = productCode
+                                Log.d("WMS_OUTBOUND", "🔍 解析目标SKU: $targetSku")
+                                handleProductDataWithTargetSku(productData, targetSku)
+                            } else {
+                                // 扫码的是商品编码，使用普通处理
+                                handleProductData(productData)
+                            }
+                            
+                            if (!keepInput) {
+                                editProductCode.setText("")
+                            }
                             return@launch
                         }
                     }
                 } catch (e: Exception) {
-                    Log.d("WMS_OUTBOUND", "兜底外部条码查询失败: ${e.message}")
+                    Log.d("WMS_OUTBOUND", "商品外部条码查询失败: ${e.message}")
                 }
                 
                 // 4️⃣ 所有查询都失败
@@ -720,7 +597,7 @@ class OutboundActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     private fun handleSkuData(skuData: SkuInfo) {
         try {
             // 获取预设数量
@@ -754,39 +631,68 @@ class OutboundActivity : AppCompatActivity() {
             val defaultLocation = locationStocks.minByOrNull { it.value }?.key ?: "无货位"
             val defaultLocationStock = locationStocks[defaultLocation] ?: totalStock
             
-            // 解析SKU编码获取商品编码、颜色、尺码
-            val skuParts = skuData.sku_code.split("-")
-            val productCode = skuParts.getOrNull(0) ?: skuData.sku_code
-            val color = skuData.sku_color ?: (skuParts.getOrNull(1) ?: "")
-            val size = skuData.sku_size ?: (skuParts.getOrNull(2) ?: "")
+            // 🔍 检查是否已存在相同SKU+库位的出库项目
+            val existingIndex = outboundItems.indexOfFirst { item ->
+                item.sku == skuData.sku_code && item.location == defaultLocation
+            }
             
-            // 创建出库项目
-            val outboundItem = OutboundItem(
-                sku = skuData.sku_code,
-                productName = productCode,  // 如果没有商品名称，使用商品编码
-                location = defaultLocation,
-                quantity = minOf(presetQuantity, defaultLocationStock),
-                color = color,
-                size = size,
-                batch = "",
-                imageUrl = processImageUrl(skuData.image_path ?: ""),
-                maxStock = defaultLocationStock,
-                locationStocks = locationStocks,
-                productId = "",  // SKU查询可能没有product_id
-                allColors = emptyList(),  // SKU查询时暂不处理动态选择器
-                allSizes = emptyMap(),
-                selectedColorIndex = 0,
-                selectedSizeIndex = 0
-            )
-            outboundItems.add(outboundItem)
-            
-            // 如果预设数量超过默认库位库存，触发智能拆分
-            if (presetQuantity > defaultLocationStock) {
-                val shortage = presetQuantity - defaultLocationStock
-                Log.d("WMS_OUTBOUND", "🧠 需要智能拆分: 预设 $presetQuantity，当前库位 $defaultLocationStock，缺少 $shortage")
+            if (existingIndex >= 0) {
+                // 已存在，累加数量
+                val existingItem = outboundItems[existingIndex]
+                val newQuantity = existingItem.quantity + presetQuantity
+                val maxAllowedQuantity = existingItem.maxStock
                 
-                val position = outboundItems.size - 1
-                smartSplit(position, shortage)
+                if (newQuantity <= maxAllowedQuantity) {
+                    // 不超库存，直接累加
+                    val updatedItem = existingItem.copy(quantity = newQuantity)
+                    outboundItems[existingIndex] = updatedItem
+                    Log.d("WMS_OUTBOUND", "✅ 累加数量: ${skuData.sku_code} 在 $defaultLocation，原数量 ${existingItem.quantity} + $presetQuantity = $newQuantity")
+                    Toast.makeText(this@OutboundActivity, "✅ 累加数量: ${skuData.sku_code} (+$presetQuantity)", Toast.LENGTH_SHORT).show()
+                } else {
+                    // 超出库存，提示用户
+                    Toast.makeText(this@OutboundActivity, 
+                        "库存不足！${skuData.sku_code} 在 $defaultLocation 最大库存 $maxAllowedQuantity 件，当前已有 ${existingItem.quantity} 件", 
+                        Toast.LENGTH_LONG).show()
+                    return
+                }
+            } else {
+                // 不存在，创建新的出库项目
+                
+                // 解析SKU编码获取商品编码、颜色、尺码
+                val skuParts = skuData.sku_code.split("-")
+                val productCode = skuParts.getOrNull(0) ?: skuData.sku_code
+                val color = skuData.sku_color ?: (skuParts.getOrNull(1) ?: "")
+                val size = skuData.sku_size ?: (skuParts.getOrNull(2) ?: "")
+                
+                // 创建出库项目
+                val outboundItem = OutboundItem(
+                    sku = skuData.sku_code,
+                    productName = productCode,  // 如果没有商品名称，使用商品编码
+                    location = defaultLocation,
+                    quantity = minOf(presetQuantity, defaultLocationStock),
+                    color = color,
+                    size = size,
+                    batch = "",
+                    imageUrl = processImageUrl(skuData.image_path ?: ""),
+                    maxStock = defaultLocationStock,
+                    locationStocks = locationStocks,
+                    productId = "",  // SKU查询可能没有product_id
+                    allColors = emptyList(),  // SKU查询时暂不处理动态选择器
+                    allSizes = emptyMap(),
+                    selectedColorIndex = 0,
+                    selectedSizeIndex = 0
+                )
+                outboundItems.add(outboundItem)
+                Log.d("WMS_OUTBOUND", "✅ 新增出库项: ${skuData.sku_code} 在 $defaultLocation，数量 $presetQuantity")
+                
+                // 如果预设数量超过默认库位库存，触发智能拆分
+                if (presetQuantity > defaultLocationStock) {
+                    val shortage = presetQuantity - defaultLocationStock
+                    Log.d("WMS_OUTBOUND", "🧠 需要智能拆分: 预设 $presetQuantity，当前库位 $defaultLocationStock，缺少 $shortage")
+                    
+                    val position = outboundItems.size - 1
+                    smartSplit(position, shortage)
+                }
             }
             
             updateOutboundTitle()
@@ -806,6 +712,10 @@ class OutboundActivity : AppCompatActivity() {
             // 获取预设数量
             val presetQuantity = editQuantityInput.text.toString().toIntOrNull() ?: 1
             Log.d("WMS_OUTBOUND", "📦 处理商品数据，目标SKU: $targetSku, 预设数量: $presetQuantity")
+            Log.d("WMS_OUTBOUND", "📦 商品信息: ${productData.product_code} - ${productData.product_name}")
+            Log.d("WMS_OUTBOUND", "📦 商品总库存: ${productData.product_total_quantity}")
+            Log.d("WMS_OUTBOUND", "📦 颜色数量: ${productData.colors?.size ?: 0}")
+            Log.d("WMS_OUTBOUND", "📦 SKU数量: ${productData.skus?.size ?: 0}")
             
             // 首先检查 skus 数组中是否有目标SKU
             val skuExists = productData.skus?.any { it.sku_code == targetSku } == true
@@ -822,134 +732,203 @@ class OutboundActivity : AppCompatActivity() {
             
             // 查找目标SKU
             Log.d("WMS_OUTBOUND", "🔍 在商品数据中查找目标SKU: $targetSku")
+            Log.d("WMS_OUTBOUND", "🔍 商品数据包含 ${productData.colors?.size ?: 0} 种颜色")
+            
             var foundTargetSku = false
+            var allAvailableSkus = mutableListOf<String>()
+            var availableSkusWithStock = mutableListOf<String>()
+            
             productData.colors?.forEach { colorData ->
                 Log.d("WMS_OUTBOUND", "🎨 检查颜色: ${colorData.color}, 有 ${colorData.sizes?.size ?: 0} 个尺码")
                 colorData.sizes?.forEach { sizeData ->
-                    Log.d("WMS_OUTBOUND", "📏 检查SKU: ${sizeData.sku_code}, 库存: ${sizeData.sku_total_quantity ?: 0}")
-                    if (sizeData.sku_code == targetSku) {
+                    val skuCode = sizeData.sku_code
+                    val skuSize = sizeData.sku_size ?: ""
+                    val skuColor = colorData.color
+                    val skuStock = sizeData.sku_total_quantity ?: 0
+                    allAvailableSkus.add(skuCode)
+                    
+                    if (skuStock > 0) {
+                        availableSkusWithStock.add(skuCode)
+                    }
+                    
+                    Log.d("WMS_OUTBOUND", "📏 检查SKU: $skuCode (颜色:$skuColor, 尺码:$skuSize), 库存: $skuStock")
+                    
+                    // 精确匹配
+                    if (skuCode == targetSku) {
                         foundTargetSku = true
-                        Log.d("WMS_OUTBOUND", "🎯 找到目标SKU: $targetSku")
-                        val totalStock = sizeData.sku_total_quantity ?: 0
+                        Log.d("WMS_OUTBOUND", "🎯 精确匹配找到目标SKU: $targetSku (颜色:$skuColor, 尺码:$skuSize), 库存: $skuStock")
                         
-                        if (totalStock == 0) {
-                            Toast.makeText(this@OutboundActivity, "SKU $targetSku 库存为0，无法出库", Toast.LENGTH_SHORT).show()
-                            return
-                        }
-                        
-                        // 检查预设数量是否超出总库存
-                        if (presetQuantity > totalStock) {
-                            Toast.makeText(this@OutboundActivity, 
-                                "SKU $targetSku 库存不足！需要 $presetQuantity 件，总库存只有 $totalStock 件", 
-                                Toast.LENGTH_LONG).show()
-                            return
-                        }
-                        
-                        // 获取各库位的库存分布
-                        val locationStocks = mutableMapOf<String, Int>()
-                        sizeData.locations?.forEach { locationData ->
-                            if (locationData.stock_quantity > 0) {
-                                locationStocks[locationData.location_code] = locationData.stock_quantity
-                            }
-                        }
-                        
-                        // 默认选择库存少的库位（优先清空小库位）
-                        val defaultLocation = locationStocks.minByOrNull { it.value }?.key ?: "无货位"
-                        val defaultLocationStock = locationStocks[defaultLocation] ?: totalStock
-                        
-                        // 🔍 检查是否已存在相同SKU+库位的出库项目
-                        val existingIndex = outboundItems.indexOfFirst { item ->
-                            item.sku == targetSku && item.location == defaultLocation
-                        }
-                        
-                        if (existingIndex >= 0) {
-                            // 已存在，累加数量
-                            val existingItem = outboundItems[existingIndex]
-                            val newQuantity = existingItem.quantity + presetQuantity
-                            val maxAllowedQuantity = existingItem.maxStock
-                            
-                            if (newQuantity <= maxAllowedQuantity) {
-                                // 不超库存，直接累加
-                                val updatedItem = existingItem.copy(quantity = newQuantity)
-                                outboundItems[existingIndex] = updatedItem
-                                Log.d("WMS_OUTBOUND", "✅ 累加数量: $targetSku 在 $defaultLocation，原数量 ${existingItem.quantity} + $presetQuantity = $newQuantity")
-                                Toast.makeText(this@OutboundActivity, "✅ 累加数量: $targetSku (+$presetQuantity)", Toast.LENGTH_SHORT).show()
-                            } else {
-                                // 超出库存，提示用户
-                                Toast.makeText(this@OutboundActivity, 
-                                    "库存不足！$targetSku 在 $defaultLocation 最大库存 $maxAllowedQuantity 件，当前已有 ${existingItem.quantity} 件", 
-                                    Toast.LENGTH_LONG).show()
-                                return
-                            }
+                        // 检查库存
+                        if (skuStock > 0) {
+                            processTargetSku(sizeData, colorData, productData, presetQuantity)
                         } else {
-                            // 不存在，创建新的出库项目
-                            
-                            // 🎯 为特定SKU创建单一选项的颜色和尺码列表（用于显示，但会被禁用）
-                            val lockedColors = listOf(ColorOption(
-                                color = colorData.color,
-                                imagePath = colorData.image_path ?: ""
-                            ))
-                            
-                            val lockedSizes = mapOf(colorData.color to listOf(SizeOption(
-                                skuCode = sizeData.sku_code,
-                                skuSize = sizeData.sku_size ?: "",
-                                locationStocks = locationStocks
-                            )))
-                            
-                            val outboundItem = OutboundItem(
-                                sku = targetSku,
-                                productName = productData.product_name,
-                                location = defaultLocation,
-                                quantity = minOf(presetQuantity, defaultLocationStock),
-                                color = colorData.color,
-                                size = sizeData.sku_size ?: "",
-                                batch = "",
-                                imageUrl = processImageUrl(colorData.image_path ?: ""),
-                                maxStock = defaultLocationStock,
-                                locationStocks = locationStocks,
-                                productId = productData.product_id,
-                                allColors = lockedColors,  // 提供单一颜色选项用于显示
-                                allSizes = lockedSizes,    // 提供单一尺码选项用于显示
-                                selectedColorIndex = 0,   // 锁定为第一个（也是唯一的）选项
-                                selectedSizeIndex = 0,    // 锁定为第一个（也是唯一的）选项
-                                isSkuLocked = true        // 标记为锁定SKU，适配器会禁用选择器
-                            )
-                            outboundItems.add(outboundItem)
-                            Log.d("WMS_OUTBOUND", "✅ 新增出库项: $targetSku 在 $defaultLocation，数量 $presetQuantity")
+                            Log.w("WMS_OUTBOUND", "❌ 目标SKU库存为0: $targetSku")
+                            Toast.makeText(this@OutboundActivity, "SKU $targetSku 库存为0，无法出库", Toast.LENGTH_LONG).show()
                         }
-                        
-                        // 如果预设数量超过默认库位库存，触发智能拆分
-                        if (presetQuantity > defaultLocationStock) {
-                            val shortage = presetQuantity - defaultLocationStock
-                            Log.d("WMS_OUTBOUND", "🧠 需要智能拆分: 预设 $presetQuantity，当前库位 $defaultLocationStock，缺少 $shortage")
-                            
-                            val position = outboundItems.size - 1
-                            smartSplit(position, shortage)
-                        }
-                        
-                        Log.d("WMS_OUTBOUND", "✅ 成功添加目标SKU: $targetSku")
-                        
-                        updateOutboundTitle()
-                        outboundAdapter.notifyDataSetChanged()
-                        btnConfirmOutbound.isEnabled = outboundItems.isNotEmpty()
                         return
                     }
                 }
             }
             
+            // 如果没有精确匹配，尝试模糊匹配
             if (!foundTargetSku) {
-                Toast.makeText(this@OutboundActivity, "未找到SKU: $targetSku", Toast.LENGTH_SHORT).show()
-                return
+                Log.d("WMS_OUTBOUND", "🔍 精确匹配失败，尝试模糊匹配")
+                Log.d("WMS_OUTBOUND", "🔍 所有可用SKU: ${allAvailableSkus.joinToString(", ")}")
+                
+                // 尝试忽略大小写的匹配
+                val targetSkuLower = targetSku.lowercase()
+                productData.colors?.forEach { colorData ->
+                    colorData.sizes?.forEach { sizeData ->
+                        val skuCode = sizeData.sku_code
+                        val skuStock = sizeData.sku_total_quantity ?: 0
+                        if (skuCode.lowercase() == targetSkuLower) {
+                            foundTargetSku = true
+                            Log.d("WMS_OUTBOUND", "🎯 模糊匹配找到目标SKU: $targetSku → $skuCode, 库存: $skuStock")
+                            
+                            // 检查库存
+                            if (skuStock > 0) {
+                                processTargetSku(sizeData, colorData, productData, presetQuantity)
+                            } else {
+                                Log.w("WMS_OUTBOUND", "❌ 目标SKU库存为0: $skuCode")
+                                Toast.makeText(this@OutboundActivity, "SKU $skuCode 库存为0，无法出库", Toast.LENGTH_LONG).show()
+                            }
+                            return
+                        }
+                    }
+                }
             }
             
-            updateOutboundTitle()
-            outboundAdapter.notifyDataSetChanged()
-            btnConfirmOutbound.isEnabled = outboundItems.isNotEmpty()
+            if (!foundTargetSku) {
+                Log.w("WMS_OUTBOUND", "❌ 未找到目标SKU: $targetSku")
+                Log.w("WMS_OUTBOUND", "❌ 所有可用SKU: ${allAvailableSkus.joinToString(", ")}")
+                Log.w("WMS_OUTBOUND", "❌ 有库存的SKU: ${availableSkusWithStock.joinToString(", ")}")
+                
+                if (availableSkusWithStock.isNotEmpty()) {
+                    Toast.makeText(this@OutboundActivity, 
+                        "未找到SKU: $targetSku\n有库存的SKU: ${availableSkusWithStock.take(5).joinToString(", ")}", 
+                        Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this@OutboundActivity, 
+                        "未找到SKU: $targetSku\n该商品所有SKU都无库存", 
+                        Toast.LENGTH_LONG).show()
+                }
+                return
+            }
             
         } catch (e: Exception) {
             Log.e("WMS_OUTBOUND", "❌ 处理目标SKU数据异常: ${e.message}")
             Toast.makeText(this@OutboundActivity, "处理SKU数据失败", Toast.LENGTH_SHORT).show()
         }
+    }
+    
+    private fun processTargetSku(sizeData: SkuInfo, colorData: ColorInfo, productData: Product, presetQuantity: Int) {
+        val targetSku = sizeData.sku_code
+        Log.d("WMS_OUTBOUND", "🎯 处理目标SKU: $targetSku")
+        val totalStock = sizeData.sku_total_quantity ?: 0
+        
+        if (totalStock == 0) {
+            Toast.makeText(this@OutboundActivity, "SKU $targetSku 库存为0，无法出库", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        // 检查预设数量是否超出总库存
+        if (presetQuantity > totalStock) {
+            Toast.makeText(this@OutboundActivity, 
+                "SKU $targetSku 库存不足！需要 $presetQuantity 件，总库存只有 $totalStock 件", 
+                Toast.LENGTH_LONG).show()
+            return
+        }
+        
+        // 获取各库位的库存分布
+        val locationStocks = mutableMapOf<String, Int>()
+        sizeData.locations?.forEach { locationData ->
+            if (locationData.stock_quantity > 0) {
+                locationStocks[locationData.location_code] = locationData.stock_quantity
+            }
+        }
+        
+        // 默认选择库存少的库位（优先清空小库位）
+        val defaultLocation = locationStocks.minByOrNull { it.value }?.key ?: "无货位"
+        val defaultLocationStock = locationStocks[defaultLocation] ?: totalStock
+        
+        // 🔍 检查是否已存在相同SKU+库位的出库项目
+        val existingIndex = outboundItems.indexOfFirst { item ->
+            item.sku == targetSku && item.location == defaultLocation
+        }
+        
+        if (existingIndex >= 0) {
+            // 已存在，累加数量
+            val existingItem = outboundItems[existingIndex]
+            val newQuantity = existingItem.quantity + presetQuantity
+            val maxAllowedQuantity = existingItem.maxStock
+            
+            if (newQuantity <= maxAllowedQuantity) {
+                // 不超库存，直接累加
+                val updatedItem = existingItem.copy(quantity = newQuantity)
+                outboundItems[existingIndex] = updatedItem
+                Log.d("WMS_OUTBOUND", "✅ 累加数量: $targetSku 在 $defaultLocation，原数量 ${existingItem.quantity} + $presetQuantity = $newQuantity")
+                Toast.makeText(this@OutboundActivity, "✅ 累加数量: $targetSku (+$presetQuantity)", Toast.LENGTH_SHORT).show()
+            } else {
+                // 超出库存，提示用户
+                Toast.makeText(this@OutboundActivity, 
+                    "库存不足！$targetSku 在 $defaultLocation 最大库存 $maxAllowedQuantity 件，当前已有 ${existingItem.quantity} 件", 
+                    Toast.LENGTH_LONG).show()
+                return
+            }
+        } else {
+            // 不存在，创建新的出库项目
+            
+            // 🎯 为特定SKU创建单一选项的颜色和尺码列表（用于显示，但会被禁用）
+            val lockedColors = listOf(ColorOption(
+                color = colorData.color,
+                imagePath = colorData.image_path ?: ""
+            ))
+            
+            val lockedSizes = mapOf(colorData.color to listOf(SizeOption(
+                skuCode = sizeData.sku_code,
+                skuSize = sizeData.sku_size ?: "",
+                locationStocks = locationStocks
+            )))
+            
+            // 计算实际创建的数量
+            val actualQuantity = minOf(presetQuantity, defaultLocationStock)
+            
+            val outboundItem = OutboundItem(
+                sku = targetSku,
+                productName = productData.product_name,
+                location = defaultLocation,
+                quantity = actualQuantity,
+                color = colorData.color,
+                size = sizeData.sku_size ?: "",
+                batch = "",
+                imageUrl = processImageUrl(colorData.image_path ?: ""),
+                maxStock = defaultLocationStock,
+                locationStocks = locationStocks,
+                productId = productData.product_id,
+                allColors = lockedColors,  // 提供单一颜色选项用于显示
+                allSizes = lockedSizes,    // 提供单一尺码选项用于显示
+                selectedColorIndex = 0,   // 锁定为第一个（也是唯一的）选项
+                selectedSizeIndex = 0,    // 锁定为第一个（也是唯一的）选项
+                isSkuLocked = true        // 标记为锁定SKU，适配器会禁用选择器
+            )
+            outboundItems.add(outboundItem)
+            Log.d("WMS_OUTBOUND", "✅ 新增出库项: $targetSku 在 $defaultLocation，数量 $actualQuantity")
+            
+            // 如果预设数量超过默认库位库存，触发智能拆分
+            if (presetQuantity > defaultLocationStock) {
+                val shortage = presetQuantity - defaultLocationStock
+                Log.d("WMS_OUTBOUND", "🧠 需要智能拆分: 预设 $presetQuantity，当前库位 $defaultLocationStock，缺少 $shortage")
+                
+                val position = outboundItems.size - 1
+                smartSplit(position, shortage)
+            }
+        }
+        
+        Log.d("WMS_OUTBOUND", "✅ 成功添加目标SKU: $targetSku")
+        
+        updateOutboundTitle()
+        outboundAdapter.notifyDataSetChanged()
+        btnConfirmOutbound.isEnabled = outboundItems.isNotEmpty()
     }
 
     private fun handleProductData(productData: Product) {
@@ -1061,11 +1040,13 @@ class OutboundActivity : AppCompatActivity() {
                         }
                     } else {
                         // 不存在，创建新的出库项目
+                        val actualQuantity = minOf(presetQuantity, defaultLocationStock)
+                        
                         val outboundItem = OutboundItem(
                             sku = defaultSku!!.sku_code,
                             productName = productData.product_name,
                             location = defaultLocation,
-                            quantity = minOf(presetQuantity, defaultLocationStock),
+                            quantity = actualQuantity,
                             color = defaultColor,
                             size = defaultSku!!.sku_size ?: "",
                             batch = "",
@@ -1079,18 +1060,10 @@ class OutboundActivity : AppCompatActivity() {
                             selectedSizeIndex = 0
                         )
                         outboundItems.add(outboundItem)
-                        Log.d("WMS_OUTBOUND", "✅ 新增出库项: ${defaultSku!!.sku_code} 在 $defaultLocation，数量 $presetQuantity")
-                    }
-                    
-                    Log.d("WMS_OUTBOUND", "✅ 创建单个商品卡: ${defaultSku!!.sku_code}, 用户可选择其他SKU")
-                    
-                    // 如果预设数量超过默认库位库存，触发智能拆分
-                    if (presetQuantity > defaultLocationStock) {
-                        val shortage = presetQuantity - defaultLocationStock
-                        Log.d("WMS_OUTBOUND", "🧠 需要智能拆分: 预设 $presetQuantity，当前库位 $defaultLocationStock，缺少 $shortage")
+                        Log.d("WMS_OUTBOUND", "✅ 新增出库项: ${defaultSku!!.sku_code} 在 $defaultLocation，数量 $actualQuantity")
                         
-                        val position = outboundItems.size - 1
-                        smartSplit(position, shortage)
+                        Log.d("WMS_OUTBOUND", "✅ 创建单个商品卡: ${defaultSku!!.sku_code}, 用户可选择其他SKU")
+                        
                     }
                 } else {
                     Toast.makeText(this@OutboundActivity, "商品 ${productData.product_code} 没有有效库存", Toast.LENGTH_SHORT).show()
@@ -1228,43 +1201,73 @@ class OutboundActivity : AppCompatActivity() {
                     )
                 }
                 
-                var successCount = 0
-                var failCount = 0
+                val successResults = mutableListOf<String>()
+                val errorMessages = mutableListOf<String>()
                 
                 for (request in requests) {
                     try {
                         val response = ApiClient.getApiService().outbound(request)
                         if (response.isSuccessful) {
                             val apiResponse = response.body()
-                            if (apiResponse?.success == true) {
-                                successCount++
+                            if (apiResponse?.success == true && apiResponse.inventory != null) {
+                                val result = apiResponse.inventory
                                 Log.d("WMS_OUTBOUND", "✅ 出库成功: ${request.sku_code}")
+                                Log.d("WMS_OUTBOUND", "📊 库存更新: 库位${result.location_code}剩余${result.sku_location_quantity}件，SKU总库存${result.sku_total_quantity}件")
+                                
+                                // 构建成功的详细信息
+                                val successMsg = "✅ ${result.sku_code}\n" +
+                                                 "   库位: ${result.location_code} (剩余 ${result.sku_location_quantity}件)\n" +
+                                                 "   SKU总库存: ${result.sku_total_quantity}件"
+                                successResults.add(successMsg)
+                                Log.d("WMS_OUTBOUND", "✅ 出库成功: $successMsg")
                             } else {
-                                failCount++
-                                Log.w("WMS_OUTBOUND", "⚠️ 出库失败: ${request.sku_code} - ${apiResponse?.error_message}")
+                                val errorMsg = "❌ ${request.sku_code}: ${apiResponse?.error_message ?: "出库失败"}"
+                                errorMessages.add(errorMsg)
+                                Log.w("WMS_OUTBOUND", errorMsg)
                             }
                         } else {
-                            failCount++
-                            Log.w("WMS_OUTBOUND", "⚠️ 出库API调用失败: ${request.sku_code} - ${response.code()}")
+                            val errorBody = response.errorBody()?.string() ?: response.message()
+                            val errorMsg = "❌ ${request.sku_code}: HTTP ${response.code()} - $errorBody"
+                            errorMessages.add(errorMsg)
+                            Log.w("WMS_OUTBOUND", errorMsg)
                         }
                     } catch (e: Exception) {
-                        failCount++
-                        Log.e("WMS_OUTBOUND", "❌ 出库异常: ${request.sku_code} - ${e.message}")
+                        val errorMsg = "❌ ${request.sku_code}: ${e.message}"
+                        errorMessages.add(errorMsg)
+                        Log.e("WMS_OUTBOUND", errorMsg, e)
                     }
                 }
                 
                 // 更新UI
                 runOnUiThread {
-                    if (failCount == 0) {
-                        Toast.makeText(this@OutboundActivity, "✅ 出库成功！共 $successCount 项", Toast.LENGTH_LONG).show()
-                        // 清空列表
-                        outboundItems.clear()
-                        outboundAdapter.notifyDataSetChanged()
-                        updateOutboundTitle()
-                        btnConfirmOutbound.isEnabled = false
-                    } else {
-                        Toast.makeText(this@OutboundActivity, "部分出库失败：成功 $successCount 项，失败 $failCount 项", Toast.LENGTH_LONG).show()
+                    val finalMessage = buildString {
+                        if (successResults.isNotEmpty()) {
+                            append("出库成功 (${successResults.size}条):\n")
+                            append("--------------------\n")
+                            append(successResults.joinToString("\n\n"))
+                        }
+                        if (errorMessages.isNotEmpty()) {
+                            if (successResults.isNotEmpty()) append("\n\n")
+                            append("出库失败 (${errorMessages.size}条):\n")
+                            append("--------------------\n")
+                            append(errorMessages.joinToString("\n"))
+                        }
                     }
+
+                    AlertDialog.Builder(this@OutboundActivity)
+                        .setTitle("出库结果")
+                        .setMessage(finalMessage)
+                        .setPositiveButton("确定") { _, _ ->
+                            if (successResults.isNotEmpty()) {
+                                // 只有在有成功条目时才清空列表
+                                outboundItems.clear()
+                                outboundAdapter.notifyDataSetChanged()
+                                updateOutboundTitle()
+                                btnConfirmOutbound.isEnabled = false
+                            }
+                        }
+                        .setCancelable(false)
+                        .show()
                 }
                 
             } catch (e: Exception) {
@@ -1338,6 +1341,80 @@ class OutboundActivity : AppCompatActivity() {
             Toast.LENGTH_LONG).show()
         
         Log.d("WMS_OUTBOUND", "✅ 智能拆分完成(库存少优先): 新增 $successCount 项，总需求 ${shortage}, 实际满足 $successQuantity")
+    }
+    
+    private fun processImageUrl(rawImageUrl: String): String {
+        return if (rawImageUrl.isNotEmpty()) {
+            if (rawImageUrl.startsWith("http://") || rawImageUrl.startsWith("https://")) {
+                rawImageUrl
+            } else {
+                val baseUrl = ApiClient.getServerUrl(this)
+                "${baseUrl.trimEnd('/')}/$rawImageUrl"
+            }
+        } else {
+            ""
+        }
+    }
+
+    private fun setupClickListeners() {
+        btnConfirmProduct.setOnClickListener {
+            val productCode = editProductCode.text.toString().trim()
+            if (productCode.isEmpty()) {
+                Toast.makeText(this, "请输入商品编码", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            smartQueryProduct(productCode)
+        }
+        
+        btnConfirmOutbound.setOnClickListener {
+            confirmOutbound()
+        }
+    }
+    
+    private fun loadLocationOptions() {
+        lifecycleScope.launch {
+            try {
+                Log.d("WMS_OUTBOUND", "🏪 开始加载货位选项")
+                val response = ApiClient.getApiService().getInventoryByLocation()
+                
+                if (response.isSuccessful) {
+                    val apiResponse = response.body()
+                    if (apiResponse?.success == true && apiResponse.data != null) {
+                        locationOptions.clear()
+                        locationOptions.add("无货位")
+                        
+                        // 提取所有唯一的库位代码
+                        val uniqueLocations = apiResponse.data
+                            .mapNotNull { it.location_code }
+                            .filter { it.isNotBlank() && it != "null" }
+                            .distinct()
+                            .sorted()
+                        
+                        locationOptions.addAll(uniqueLocations)
+                        Log.d("WMS_OUTBOUND", "✅ 货位选项加载成功: ${uniqueLocations.size} 个")
+                    } else {
+                        Log.w("WMS_OUTBOUND", "⚠️ 货位选项加载失败: ${apiResponse?.error_message}")
+                        loadDefaultLocations()
+                    }
+                } else {
+                    Log.w("WMS_OUTBOUND", "⚠️ API调用失败: ${response.code()}")
+                    loadDefaultLocations()
+                }
+            } catch (e: Exception) {
+                Log.e("WMS_OUTBOUND", "❌ 货位选项加载异常: ${e.message}")
+                loadDefaultLocations()
+            }
+        }
+    }
+    
+    private fun loadDefaultLocations() {
+        locationOptions.clear()
+        locationOptions.add("无货位")
+        locationOptions.add("A01-01-01")
+        locationOptions.add("A01-01-02")
+        locationOptions.add("B01-01-01")
+        locationOptions.add("西8排1架6层4位")
+        locationOptions.add("西8排2架6层4位")
     }
     
     override fun onDestroy() {

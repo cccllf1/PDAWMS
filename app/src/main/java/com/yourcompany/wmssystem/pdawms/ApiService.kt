@@ -17,7 +17,7 @@ interface ApiService {
     suspend fun getProducts(
         @Query("page") page: Int = 1,
         @Query("page_size") page_size: Int = 1000
-    ): Response<ApiResponse<List<Product>>>
+    ): Response<ApiResponse<ProductListResponse>>
     
     @GET("api/products/code/{code}")
     suspend fun getProductByCode(@Path("code") code: String): Response<ApiResponse<Product>>
@@ -31,13 +31,6 @@ interface ApiService {
     // 库存查询
     @GET("api/inventory/by-location")
     suspend fun getInventoryByLocation(): Response<ApiResponse<List<LocationInfo>>>
-    
-    @GET("api/inventory/by-product")
-    suspend fun getInventoryByProduct(
-        @Query("page") page: Int = 1,
-        @Query("page_size") page_size: Int = 1000,
-        @Query("code") code: String? = null
-    ): Response<ApiResponse<List<Product>>>
     
     // 库位管理
     @GET("api/locations")
@@ -59,7 +52,7 @@ interface ApiService {
     
     // 出库操作
     @POST("api/outbound")
-    suspend fun outbound(@Body request: OutboundRequest): Response<ApiResponse<Any>>
+    suspend fun outbound(@Body request: OutboundRequest): Response<OutboundResponse>
     
     // 库存调整
     @POST("api/inventory/adjust")

@@ -136,11 +136,12 @@ class InventoryActivity : AppCompatActivity() {
         
         lifecycleScope.launch {
             try {
-                val response = ApiClient.getApiService().getInventoryByProduct(page = 1, page_size = 1000)
+                // 使用商品查询接口，因为库存查询接口已被删除
+                val response = ApiClient.getApiService().getProducts(page = 1, page_size = 1000)
                 if (response.isSuccessful) {
                     val apiResponse = response.body()
                     if (apiResponse?.success == true && apiResponse.data != null) {
-                        val products = apiResponse.data
+                        val products = apiResponse.data.products ?: emptyList()
                         val displayItems = products.map { product ->
                             InventoryDisplayItem(
                                 product_code = product.product_code,
@@ -194,18 +195,14 @@ class InventoryActivity : AppCompatActivity() {
         
         lifecycleScope.launch {
             try {
-                // 尝试按商品编码搜索
-                val response = ApiClient.getApiService().getInventoryByProduct(
-                    page = 1, 
-                    page_size = 1000,
-                    code = searchText
-                )
+                // 尝试按商品编码搜索，使用商品查询接口
+                val response = ApiClient.getApiService().getProductByCode(searchText)
                 
                 if (response.isSuccessful) {
                     val apiResponse = response.body()
                     if (apiResponse?.success == true && apiResponse.data != null) {
-                        val products = apiResponse.data
-                        val displayItems = products.map { product ->
+                        val product = apiResponse.data
+                        val displayItems = listOf(
                             InventoryDisplayItem(
                                 product_code = product.product_code,
                                 product_name = product.product_name,
@@ -215,7 +212,7 @@ class InventoryActivity : AppCompatActivity() {
                                 image_path = product.image_path,
                                 colors = product.colors ?: emptyList()
                             )
-                        }
+                        )
                         
                         runOnUiThread {
                             inventoryAdapter.updateItems(displayItems)
@@ -228,6 +225,12 @@ class InventoryActivity : AppCompatActivity() {
                             inventoryAdapter.updateItems(emptyList())
                             showLoading(false)
                         }
+                    }
+                } else {
+                    runOnUiThread {
+                        txtStatus.text = "未找到相关商品"
+                        inventoryAdapter.updateItems(emptyList())
+                        showLoading(false)
                     }
                 }
             } catch (e: Exception) {

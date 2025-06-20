@@ -49,7 +49,10 @@ data class Product(
     @SerializedName("unit") val unit: String?,
     @SerializedName("image_path") val image_path: String?,
     @SerializedName("has_sku") val has_sku: Boolean?,
-    @SerializedName("product_total_quantity") val product_total_quantity: Int?,  // 更新字段名
+    @SerializedName("product_total_quantity") val product_total_quantity: Int?,
+    @SerializedName("total_sku_count") val total_sku_count: Int?,
+    @SerializedName("total_location_count") val total_location_count: Int?,
+    @SerializedName("total_color_count") val total_color_count: Int?,
     @SerializedName("sku_count") val sku_count: Int?,
     @SerializedName("location_count") val location_count: Int?,
     @SerializedName("color_count") val color_count: Int?,
@@ -77,7 +80,9 @@ data class ColorInfo(
     @SerializedName("color") val color: String,
     @SerializedName("image_path") val image_path: String?,
     @SerializedName("sizes") val sizes: List<SkuInfo>?,
-    @SerializedName("color_total_quantity") val color_total_quantity: Int?,  // 更新字段名
+    @SerializedName("color_total_quantity") val color_total_quantity: Int?,
+    @SerializedName("total_sku_count") val total_sku_count: Int?,
+    @SerializedName("total_location_count") val total_location_count: Int?,
     @SerializedName("sku_count") val sku_count: Int?,
     @SerializedName("location_count") val location_count: Int?
 )
@@ -203,12 +208,33 @@ data class InboundResponse(
     @SerializedName("error_message") val error_message: String?
 )
 
+// 出库响应 - 新增
+data class OutboundResponse(
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("inventory") val inventory: OutboundInventory?,
+    @SerializedName("error_code") val error_code: String?,
+    @SerializedName("error_message") val error_message: String?
+)
+
 // 入库响应 - 新增
 data class InboundInventory(
     @SerializedName("product_code") val product_code: String,
     @SerializedName("product_name") val product_name: String,
     @SerializedName("location_code") val location_code: String,
     @SerializedName("inbound_quantity") val inbound_quantity: Int,
+    @SerializedName("sku_code") val sku_code: String,
+    @SerializedName("sku_color") val sku_color: String,
+    @SerializedName("sku_size") val sku_size: String,
+    @SerializedName("sku_location_quantity") val sku_location_quantity: Int,
+    @SerializedName("sku_total_quantity") val sku_total_quantity: Int
+)
+
+// 出库响应 - 新增
+data class OutboundInventory(
+    @SerializedName("product_code") val product_code: String,
+    @SerializedName("product_name") val product_name: String,
+    @SerializedName("location_code") val location_code: String,
+    @SerializedName("outbound_quantity") val outbound_quantity: Int,
     @SerializedName("sku_code") val sku_code: String,
     @SerializedName("sku_color") val sku_color: String,
     @SerializedName("sku_size") val sku_size: String,
