@@ -2,6 +2,9 @@
     "folders": [
         {
             "path": "."
+        },
+        {
+            "path": "../../../../Volumes/docker/cccllf1/cangku-allinone"
         }
     ],
     "settings": {
