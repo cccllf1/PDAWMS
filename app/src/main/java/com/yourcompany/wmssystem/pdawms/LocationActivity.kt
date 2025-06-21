@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CoroutineScope
 import java.net.URL
 
 class LocationActivity : AppCompatActivity() {
@@ -636,9 +637,8 @@ class LocationInventoryGridAdapter(
                 val fullImageUrl = ApiClient.processImageUrl(item.image_path, imageView.context)
                 Log.d("WMS_LOCATION", "🌐 完整图片URL: $fullImageUrl")
                 
-                // TODO: 未来可以在这里添加网络图片加载库如Glide或Picasso
-                // 目前先使用占位图
-                Log.d("WMS_LOCATION", "🖼️ 暂时使用占位图代替网络图片: $fullImageUrl")
+                // 加载网络图片
+                loadNetworkImage(fullImageUrl, imageView, skuBasedImage)
             } else {
                 Log.d("WMS_LOCATION", "📷 SKU ${item.sku_code} 无图片路径，使用占位图")
             }
@@ -646,6 +646,44 @@ class LocationInventoryGridAdapter(
         } catch (e: Exception) {
             Log.w("WMS_LOCATION", "加载图片失败: ${e.message}")
             imageView.setImageResource(android.R.drawable.ic_menu_gallery)
+        }
+    }
+    
+    private fun loadNetworkImage(imageUrl: String, imageView: ImageView, fallbackImage: Int) {
+        // 使用协程在后台线程加载图片
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Log.d("WMS_LOCATION", "🌐 开始加载网络图片: $imageUrl")
+                
+                val url = java.net.URL(imageUrl)
+                val connection = url.openConnection()
+                connection.doInput = true
+                connection.connect()
+                
+                val inputStream = connection.getInputStream()
+                val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+                inputStream.close()
+                
+                if (bitmap != null) {
+                    // 在主线程更新UI
+                    withContext(Dispatchers.Main) {
+                        Log.d("WMS_LOCATION", "✅ 网络图片加载成功")
+                        imageView.setImageBitmap(bitmap)
+                    }
+                } else {
+                    Log.w("WMS_LOCATION", "⚠️ 网络图片解码失败，使用占位图")
+                    withContext(Dispatchers.Main) {
+                        imageView.setImageResource(fallbackImage)
+                    }
+                }
+                
+            } catch (e: Exception) {
+                Log.w("WMS_LOCATION", "❌ 网络图片加载失败: ${e.message}")
+                // 加载失败时在主线程显示占位图
+                withContext(Dispatchers.Main) {
+                    imageView.setImageResource(fallbackImage)
+                }
+            }
         }
     }
     
