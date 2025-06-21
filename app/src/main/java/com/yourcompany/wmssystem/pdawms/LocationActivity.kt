@@ -32,6 +32,13 @@ class LocationActivity : AppCompatActivity() {
     private val allLocations = mutableListOf<LocationWithStats>()
     private var currentLocationCode: String = "" // 当前操作的库位编码
     
+    // ===== 库位详情对话框状态 =====
+    private var currentInventoryDialog: AlertDialog? = null
+    private var currentInventoryRecyclerView: RecyclerView? = null
+    private var currentInventoryAdapter: LocationInventoryGridAdapter? = null
+    private var currentTotalSkuTextView: TextView? = null
+    private var currentTotalQuantityTextView: TextView? = null
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_location)
@@ -289,12 +296,24 @@ class LocationActivity : AppCompatActivity() {
         // 设置网格布局管理器，一排三列
         recyclerViewGrid.layoutManager = androidx.recyclerview.widget.GridLayoutManager(this, 3)
         
+        // 保存对话框引用，用于后续更新
+        currentInventoryDialog = dialog
+        currentInventoryRecyclerView = recyclerViewGrid
+        currentTotalSkuTextView = txtTotalSku
+        currentTotalQuantityTextView = txtTotalQuantity
+        
         // 加载库存数据
         loadLocationInventoryForDialog(location.location_code, recyclerViewGrid, txtTotalSku, txtTotalQuantity)
         
         // 设置点击事件
-        btnClose.setOnClickListener { dialog.dismiss() }
-        btnCloseDialog.setOnClickListener { dialog.dismiss() }
+        btnClose.setOnClickListener { 
+            clearCurrentDialogReferences()
+            dialog.dismiss() 
+        }
+        btnCloseDialog.setOnClickListener { 
+            clearCurrentDialogReferences()
+            dialog.dismiss() 
+        }
         
         dialog.show()
         
@@ -336,10 +355,11 @@ class LocationActivity : AppCompatActivity() {
                             
                             // 设置图片网格适配器
                             Log.d("WMS_LOCATION", "🔧 创建适配器，共${items.size}个条目")
-                            val gridAdapter = LocationInventoryGridAdapter(items) { item ->
+                            val gridAdapter = LocationInventoryGridAdapter(items.toMutableList()) { item ->
                                 showSkuOperationMenu(this@LocationActivity, item)
                             }
                             recyclerView.adapter = gridAdapter
+                            currentInventoryAdapter = gridAdapter // 保存适配器引用
                             Log.d("WMS_LOCATION", "🔧 适配器已设置到RecyclerView")
                             
                             if (items.isEmpty()) {
@@ -385,12 +405,27 @@ class LocationActivity : AppCompatActivity() {
             .setView(dialogView)
             .setPositiveButton("保存", null)
             .setNegativeButton("取消", null)
+            .setNeutralButton("删除", null)
             .create()
         
         dialog.setOnShowListener {
             val btnPositive = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             btnPositive.setOnClickListener {
                 updateLocation(dialogView, dialog, location)
+            }
+
+            // 处理删除按钮点击
+            val btnDelete = dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
+            btnDelete.setOnClickListener {
+                AlertDialog.Builder(this)
+                    .setTitle("删除库位")
+                    .setMessage("确定要删除库位 ${location.location_code} 吗？\n注意：只能删除没有库存的库位。")
+                    .setPositiveButton("删除") { _, _ ->
+                        dialog.dismiss()
+                        performDeleteLocation(location)
+                    }
+                    .setNegativeButton("取消", null)
+                    .show()
             }
         }
         
@@ -496,8 +531,11 @@ class LocationActivity : AppCompatActivity() {
             .create()
         
         // 设置标题和信息
-        dialogView.findViewById<TextView>(R.id.txtSkuTitle).text = "SKU操作: $skuCode"
-        dialogView.findViewById<TextView>(R.id.txtSkuInfo).text = "SKU编码: $skuCode\n库存: $quantity $unit\n商品: $productName"
+        dialogView.findViewById<TextView>(R.id.txtSkuTitle).text = "SKU: $skuCode"
+        
+        val locationInfo = if (currentLocationCode.isNotEmpty()) currentLocationCode else (item.location_code ?: "未知")
+        val infoText = "货位: $locationInfo\n库存: $quantity $unit"
+        dialogView.findViewById<TextView>(R.id.txtSkuInfo).text = infoText
         
         // 设置按钮点击事件
         dialogView.findViewById<Button>(R.id.btnInbound).setOnClickListener {
@@ -614,44 +652,44 @@ class LocationActivity : AppCompatActivity() {
     // 转移操作
     private fun performTransferOperation(context: android.content.Context, item: LocationInventoryItem) {
         Log.d("WMS_LOCATION", "🔄 执行转移操作: ${item.sku_code}")
-        
-        val input = EditText(context).apply {
-            hint = "请输入目标库位编码"
+
+        // 先输入目标库位
+        val inputLocation = EditText(context).apply {
+            hint = "请输入目标库位编码 (留空=无货位)"
             inputType = android.text.InputType.TYPE_CLASS_TEXT
         }
-        
+
         AlertDialog.Builder(context)
             .setTitle("🔄 转移操作")
-            .setMessage("库位: ${currentLocationCode}\nSKU: ${item.sku_code}\n当前库存: ${item.stock_quantity} ${item.unit ?: "件"}")
-            .setView(input)
+            .setMessage("当前库位: ${currentLocationCode}\nSKU: ${item.sku_code}\n当前库存: ${item.stock_quantity} ${item.unit ?: "件"}")
+            .setView(inputLocation)
             .setPositiveButton("下一步") { _, _ ->
-                val targetLocation = input.text.toString().trim()
-                if (targetLocation.isNotEmpty()) {
-                    showTransferQuantityDialog(context, item, targetLocation)
-                } else {
-                    Toast.makeText(context, "请输入目标库位编码", Toast.LENGTH_SHORT).show()
+                var targetLocation = inputLocation.text.toString().trim()
+                if (targetLocation.isEmpty()) {
+                    targetLocation = "无货位"
                 }
+                showTransferQuantityDialog(context, item, targetLocation)
             }
             .setNegativeButton("取消", null)
             .show()
     }
-    
+
     // 显示转移数量对话框
     private fun showTransferQuantityDialog(context: android.content.Context, item: LocationInventoryItem, targetLocation: String) {
-        val input = EditText(context).apply {
+        val currentStock = item.stock_quantity ?: 0
+        val inputQty = EditText(context).apply {
             hint = "请输入转移数量"
             inputType = android.text.InputType.TYPE_CLASS_NUMBER
-            setText("1")
+            setText(currentStock.toString())
+            selectAll()
         }
-        
+
         AlertDialog.Builder(context)
             .setTitle("🔄 确认转移")
-            .setMessage("从库位: ${currentLocationCode}\n到库位: $targetLocation\nSKU: ${item.sku_code}")
-            .setView(input)
+            .setMessage("从库位: ${currentLocationCode}\n到库位: $targetLocation\nSKU: ${item.sku_code}\n当前库存: $currentStock ${item.unit ?: "件"}")
+            .setView(inputQty)
             .setPositiveButton("确认转移") { _, _ ->
-                val quantity = input.text.toString().toIntOrNull() ?: 0
-                val currentStock = item.stock_quantity ?: 0
-                
+                val quantity = inputQty.text.toString().toIntOrNull() ?: 0
                 if (quantity > 0) {
                     if (quantity <= currentStock) {
                         executeSkuTransferOperation(context, currentLocationCode, targetLocation, item, quantity)
@@ -666,40 +704,238 @@ class LocationActivity : AppCompatActivity() {
             .show()
     }
     
-    // 查看详情
-    private fun showSkuDetails(context: android.content.Context, item: LocationInventoryItem) {
-        val skuCode = item.sku_code ?: "未知SKU"
-        val quantity = item.stock_quantity ?: 0
-        val unit = item.unit ?: "件"
-        val productName = item.product_name ?: "未知商品"
-        
-        val message = "SKU编码: $skuCode\n商品名称: $productName\n当前库存: $quantity $unit"
-        
-        AlertDialog.Builder(context)
-            .setTitle("ℹ️ SKU详情")
-            .setMessage(message)
-            .setPositiveButton("确定", null)
-            .show()
-    }
-    
     // 执行SKU入库操作
     private fun executeSkuInboundOperation(context: android.content.Context, locationCode: String, item: LocationInventoryItem, quantity: Int) {
-        // TODO: 调用入库API
-        Log.d("WMS_LOCATION", "✅ SKU入库操作: 库位=$locationCode, SKU=${item.sku_code}, 数量=$quantity")
-        Toast.makeText(context, "入库成功！\n库位: $locationCode\nSKU: ${item.sku_code}\n数量: $quantity", Toast.LENGTH_LONG).show()
+        Log.d("WMS_LOCATION", "✅ 开始执行SKU入库操作: 库位=$locationCode, SKU=${item.sku_code}, 数量=$quantity")
         
-        // 这里可以添加实际的API调用
-        // ApiClient.getApiService().performSkuInbound(locationCode, item.sku_code, quantity)
+        lifecycleScope.launch {
+            try {
+                // 构建入库请求
+                val request = InboundRequest(
+                    sku_code = item.sku_code ?: "",
+                    location_code = locationCode,
+                    inbound_quantity = quantity,
+                    operator_id = ApiClient.getCurrentUserId() ?: "wms_user",
+                    batch_number = null,
+                    is_urgent = false,
+                    notes = "货位管理页面入库操作"
+                )
+                
+                Log.d("WMS_LOCATION", "🔄 发送入库请求...")
+                val response = ApiClient.getApiService().inbound(request)
+                
+                runOnUiThread {
+                    if (response.isSuccessful) {
+                        val apiResponse = response.body()
+                        if (apiResponse?.success == true && apiResponse.inventory != null) {
+                            val result = apiResponse.inventory
+                            
+                            // 成功弹窗 - 参考入库页面的详细显示
+                            val successMessage = buildString {
+                                append("✅ 入库操作成功！\n")
+                                append("--------------------\n")
+                                append("SKU编码: ${result.sku_code}\n")
+                                append("库位: ${result.location_code}\n")
+                                append("入库数量: $quantity 件\n")
+                                append("库位库存: ${result.sku_location_quantity} 件\n")
+                                append("SKU总库存: ${result.sku_total_quantity} 件")
+                            }
+                            
+                            AlertDialog.Builder(this@LocationActivity)
+                                .setTitle("📦 入库结果")
+                                .setMessage(successMessage)
+                                .setPositiveButton("确定") { _, _ ->
+                                    // 使用API返回的数据更新UI，而不是重新加载所有数据
+                                    updateLocationInventoryAfterOperation(
+                                        locationCode = result.location_code,
+                                        skuCode = result.sku_code,
+                                        newLocationQuantity = result.sku_location_quantity,
+                                        newTotalQuantity = result.sku_total_quantity
+                                    )
+                                }
+                                .setCancelable(false)
+                                .show()
+                                
+                            Log.d("WMS_LOCATION", "✅ 入库成功: $successMessage")
+                            
+                        } else {
+                            // 失败弹窗
+                            val errorMessage = buildString {
+                                append("❌ 入库操作失败！\n")
+                                append("--------------------\n")
+                                append("SKU编码: ${item.sku_code}\n")
+                                append("库位: $locationCode\n")
+                                append("入库数量: $quantity 件\n")
+                                append("失败原因: ${apiResponse?.error_message ?: "未知错误"}")
+                            }
+                            
+                            AlertDialog.Builder(this@LocationActivity)
+                                .setTitle("❌ 入库失败")
+                                .setMessage(errorMessage)
+                                .setPositiveButton("确定", null)
+                                .show()
+                                
+                            Log.e("WMS_LOCATION", "❌ 入库失败: ${apiResponse?.error_message}")
+                        }
+                    } else {
+                        val errorBody = response.errorBody()?.string() ?: response.message()
+                        val errorMessage = buildString {
+                            append("❌ 入库操作失败！\n")
+                            append("--------------------\n")
+                            append("SKU编码: ${item.sku_code}\n")
+                            append("库位: $locationCode\n")
+                            append("入库数量: $quantity 件\n")
+                            append("错误代码: HTTP ${response.code()}\n")
+                            append("错误信息: $errorBody")
+                        }
+                        
+                        AlertDialog.Builder(this@LocationActivity)
+                            .setTitle("❌ 网络错误")
+                            .setMessage(errorMessage)
+                            .setPositiveButton("确定", null)
+                            .show()
+                            
+                        Log.e("WMS_LOCATION", "❌ HTTP错误: ${response.code()} - $errorBody")
+                    }
+                }
+                
+            } catch (e: Exception) {
+                Log.e("WMS_LOCATION", "❌ 入库操作异常: ${e.message}", e)
+                runOnUiThread {
+                    val errorMessage = buildString {
+                        append("❌ 入库操作异常！\n")
+                        append("--------------------\n")
+                        append("SKU编码: ${item.sku_code}\n")
+                        append("库位: $locationCode\n")
+                        append("入库数量: $quantity 件\n")
+                        append("异常信息: ${e.message}")
+                    }
+                    
+                    AlertDialog.Builder(this@LocationActivity)
+                        .setTitle("❌ 系统异常")
+                        .setMessage(errorMessage)
+                        .setPositiveButton("确定", null)
+                        .show()
+                }
+            }
+        }
     }
     
     // 执行SKU出库操作
     private fun executeSkuOutboundOperation(context: android.content.Context, locationCode: String, item: LocationInventoryItem, quantity: Int) {
-        // TODO: 调用出库API
-        Log.d("WMS_LOCATION", "✅ SKU出库操作: 库位=$locationCode, SKU=${item.sku_code}, 数量=$quantity")
-        Toast.makeText(context, "出库成功！\n库位: $locationCode\nSKU: ${item.sku_code}\n数量: $quantity", Toast.LENGTH_LONG).show()
+        Log.d("WMS_LOCATION", "✅ 开始执行SKU出库操作: 库位=$locationCode, SKU=${item.sku_code}, 数量=$quantity")
         
-        // 这里可以添加实际的API调用
-        // ApiClient.getApiService().performSkuOutbound(locationCode, item.sku_code, quantity)
+        lifecycleScope.launch {
+            try {
+                // 构建出库请求
+                val request = OutboundRequest(
+                    sku_code = item.sku_code ?: "",
+                    location_code = locationCode,
+                    outbound_quantity = quantity,
+                    operator_id = ApiClient.getCurrentUserId() ?: "wms_user",
+                    batch_number = null,
+                    is_urgent = false,
+                    notes = "货位管理页面出库操作"
+                )
+                
+                Log.d("WMS_LOCATION", "🔄 发送出库请求...")
+                val response = ApiClient.getApiService().outbound(request)
+                
+                runOnUiThread {
+                    if (response.isSuccessful) {
+                        val apiResponse = response.body()
+                        if (apiResponse?.success == true && apiResponse.inventory != null) {
+                            val result = apiResponse.inventory
+                            
+                            // 成功弹窗 - 参考入库页面的详细显示
+                            val successMessage = buildString {
+                                append("✅ 出库操作成功！\n")
+                                append("--------------------\n")
+                                append("SKU编码: ${result.sku_code}\n")
+                                append("库位: ${result.location_code}\n")
+                                append("出库数量: $quantity 件\n")
+                                append("剩余库存: ${result.sku_location_quantity} 件\n")
+                                append("SKU总库存: ${result.sku_total_quantity} 件")
+                            }
+                            
+                            AlertDialog.Builder(this@LocationActivity)
+                                .setTitle("📤 出库结果")
+                                .setMessage(successMessage)
+                                .setPositiveButton("确定") { _, _ ->
+                                    // 使用API返回的数据更新UI，而不是重新加载所有数据
+                                    updateLocationInventoryAfterOperation(
+                                        locationCode = result.location_code,
+                                        skuCode = result.sku_code,
+                                        newLocationQuantity = result.sku_location_quantity,
+                                        newTotalQuantity = result.sku_total_quantity
+                                    )
+                                }
+                                .setCancelable(false)
+                                .show()
+                                
+                            Log.d("WMS_LOCATION", "✅ 出库成功: $successMessage")
+                            
+                        } else {
+                            // 失败弹窗
+                            val errorMessage = buildString {
+                                append("❌ 出库操作失败！\n")
+                                append("--------------------\n")
+                                append("SKU编码: ${item.sku_code}\n")
+                                append("库位: $locationCode\n")
+                                append("出库数量: $quantity 件\n")
+                                append("失败原因: ${apiResponse?.error_message ?: "未知错误"}")
+                            }
+                            
+                            AlertDialog.Builder(this@LocationActivity)
+                                .setTitle("❌ 出库失败")
+                                .setMessage(errorMessage)
+                                .setPositiveButton("确定", null)
+                                .show()
+                                
+                            Log.e("WMS_LOCATION", "❌ 出库失败: ${apiResponse?.error_message}")
+                        }
+                    } else {
+                        val errorBody = response.errorBody()?.string() ?: response.message()
+                        val errorMessage = buildString {
+                            append("❌ 出库操作失败！\n")
+                            append("--------------------\n")
+                            append("SKU编码: ${item.sku_code}\n")
+                            append("库位: $locationCode\n")
+                            append("出库数量: $quantity 件\n")
+                            append("错误代码: HTTP ${response.code()}\n")
+                            append("错误信息: $errorBody")
+                        }
+                        
+                        AlertDialog.Builder(this@LocationActivity)
+                            .setTitle("❌ 网络错误")
+                            .setMessage(errorMessage)
+                            .setPositiveButton("确定", null)
+                            .show()
+                            
+                        Log.e("WMS_LOCATION", "❌ HTTP错误: ${response.code()} - $errorBody")
+                    }
+                }
+                
+            } catch (e: Exception) {
+                Log.e("WMS_LOCATION", "❌ 出库操作异常: ${e.message}", e)
+                runOnUiThread {
+                    val errorMessage = buildString {
+                        append("❌ 出库操作异常！\n")
+                        append("--------------------\n")
+                        append("SKU编码: ${item.sku_code}\n")
+                        append("库位: $locationCode\n")
+                        append("出库数量: $quantity 件\n")
+                        append("异常信息: ${e.message}")
+                    }
+                    
+                    AlertDialog.Builder(this@LocationActivity)
+                        .setTitle("❌ 系统异常")
+                        .setMessage(errorMessage)
+                        .setPositiveButton("确定", null)
+                        .show()
+                }
+            }
+        }
     }
     
     // 执行SKU盘点操作
@@ -707,28 +943,243 @@ class LocationActivity : AppCompatActivity() {
         val systemQuantity = item.stock_quantity ?: 0
         val difference = actualQuantity - systemQuantity
         
-        Log.d("WMS_LOCATION", "✅ SKU盘点操作: 库位=$locationCode, SKU=${item.sku_code}, 系统库存=$systemQuantity, 实际库存=$actualQuantity, 差异=$difference")
+        Log.d("WMS_LOCATION", "✅ 开始执行SKU盘点操作: 库位=$locationCode, SKU=${item.sku_code}, 系统库存=$systemQuantity, 实际库存=$actualQuantity, 差异=$difference")
         
-        val message = if (difference == 0) {
-            "盘点完成！库存数量准确无误"
-        } else {
-            "盘点完成！发现差异: ${if (difference > 0) "+" else ""}$difference"
+        lifecycleScope.launch {
+            try {
+                // 构建库存调整请求（盘点操作）
+                val request = InventoryAdjustRequest(
+                    sku_code = item.sku_code ?: "",
+                    location_code = locationCode,
+                    target_quantity = actualQuantity, // 目标数量
+                    operator_id = ApiClient.getCurrentUserId() ?: "wms_user",
+                    batch_number = null,
+                    is_urgent = false,
+                    notes = "货位管理页面盘点操作 - 系统库存:$systemQuantity, 实际库存:$actualQuantity"
+                )
+                
+                Log.d("WMS_LOCATION", "🔄 发送盘点调整请求...")
+                val response = ApiClient.getApiService().adjustInventory(request)
+                
+                runOnUiThread {
+                    if (response.isSuccessful) {
+                        val apiResponse = response.body()
+                        if (apiResponse?.success == true) {
+                            
+                            // 成功弹窗 - 根据差异显示不同内容
+                            val successMessage = buildString {
+                                if (difference == 0) {
+                                    append("✅ 盘点完成！\n")
+                                    append("--------------------\n")
+                                    append("库存数量准确无误\n")
+                                } else {
+                                    append("✅ 盘点调整完成！\n")
+                                    append("--------------------\n")
+                                    append("发现差异并已调整\n")
+                                }
+                                append("SKU编码: ${item.sku_code}\n")
+                                append("库位: $locationCode\n")
+                                append("系统库存: $systemQuantity 件\n")
+                                append("实际库存: $actualQuantity 件\n")
+                                if (difference != 0) {
+                                    append("调整数量: ${if (difference > 0) "+" else ""}$difference 件")
+                                }
+                            }
+                            
+                            AlertDialog.Builder(this@LocationActivity)
+                                .setTitle("📋 盘点结果")
+                                .setMessage(successMessage)
+                                .setPositiveButton("确定") { _, _ ->
+                                    // 盘点操作成功后，刷新库位详情对话框
+                                    refreshLocationInventoryDialog()
+                                }
+                                .setCancelable(false)
+                                .show()
+                                
+                            Log.d("WMS_LOCATION", "✅ 盘点成功: $successMessage")
+                            
+                        } else {
+                            // 失败弹窗
+                            val errorMessage = buildString {
+                                append("❌ 盘点操作失败！\n")
+                                append("--------------------\n")
+                                append("SKU编码: ${item.sku_code}\n")
+                                append("库位: $locationCode\n")
+                                append("系统库存: $systemQuantity 件\n")
+                                append("实际库存: $actualQuantity 件\n")
+                                append("调整数量: ${if (difference > 0) "+" else ""}$difference 件\n")
+                                append("失败原因: ${apiResponse?.error_message ?: "未知错误"}")
+                            }
+                            
+                            AlertDialog.Builder(this@LocationActivity)
+                                .setTitle("❌ 盘点失败")
+                                .setMessage(errorMessage)
+                                .setPositiveButton("确定", null)
+                                .show()
+                                
+                            Log.e("WMS_LOCATION", "❌ 盘点失败: ${apiResponse?.error_message}")
+                        }
+                    } else {
+                        val errorBody = response.errorBody()?.string() ?: response.message()
+                        val errorMessage = buildString {
+                            append("❌ 盘点操作失败！\n")
+                            append("--------------------\n")
+                            append("SKU编码: ${item.sku_code}\n")
+                            append("库位: $locationCode\n")
+                            append("系统库存: $systemQuantity 件\n")
+                            append("实际库存: $actualQuantity 件\n")
+                            append("调整数量: ${if (difference > 0) "+" else ""}$difference 件\n")
+                            append("错误代码: HTTP ${response.code()}\n")
+                            append("错误信息: $errorBody")
+                        }
+                        
+                        AlertDialog.Builder(this@LocationActivity)
+                            .setTitle("❌ 网络错误")
+                            .setMessage(errorMessage)
+                            .setPositiveButton("确定", null)
+                            .show()
+                            
+                        Log.e("WMS_LOCATION", "❌ HTTP错误: ${response.code()} - $errorBody")
+                    }
+                }
+                
+            } catch (e: Exception) {
+                Log.e("WMS_LOCATION", "❌ 盘点操作异常: ${e.message}", e)
+                runOnUiThread {
+                    val errorMessage = buildString {
+                        append("❌ 盘点操作异常！\n")
+                        append("--------------------\n")
+                        append("SKU编码: ${item.sku_code}\n")
+                        append("库位: $locationCode\n")
+                        append("系统库存: $systemQuantity 件\n")
+                        append("实际库存: $actualQuantity 件\n")
+                        append("调整数量: ${if (difference > 0) "+" else ""}$difference 件\n")
+                        append("异常信息: ${e.message}")
+                    }
+                    
+                    AlertDialog.Builder(this@LocationActivity)
+                        .setTitle("❌ 系统异常")
+                        .setMessage(errorMessage)
+                        .setPositiveButton("确定", null)
+                        .show()
+                }
+            }
         }
-        
-        Toast.makeText(context, "$message\n库位: $locationCode\nSKU: ${item.sku_code}", Toast.LENGTH_LONG).show()
-        
-        // 这里可以添加实际的API调用
-        // ApiClient.getApiService().performSkuInventoryAdjustment(locationCode, item.sku_code, actualQuantity)
     }
     
     // 执行SKU转移操作
     private fun executeSkuTransferOperation(context: android.content.Context, fromLocation: String, toLocation: String, item: LocationInventoryItem, quantity: Int) {
-        // TODO: 调用转移API
-        Log.d("WMS_LOCATION", "✅ SKU转移操作: 从库位=$fromLocation, 到库位=$toLocation, SKU=${item.sku_code}, 数量=$quantity")
-        Toast.makeText(context, "转移成功！\n从库位: $fromLocation\n到库位: $toLocation\nSKU: ${item.sku_code}\n数量: $quantity", Toast.LENGTH_LONG).show()
+        Log.d("WMS_LOCATION", "✅ 开始执行SKU转移操作: 从库位=$fromLocation, 到库位=$toLocation, SKU=${item.sku_code}, 数量=$quantity")
         
-        // 这里可以添加实际的API调用
-        // ApiClient.getApiService().performSkuTransfer(fromLocation, toLocation, item.sku_code, quantity)
+        lifecycleScope.launch {
+            try {
+                // 构建转移请求
+                val request = InventoryTransferRequest(
+                    sku_code = item.sku_code ?: "",
+                    from_location_code = fromLocation,
+                    to_location_code = toLocation,
+                    transfer_quantity = quantity,
+                    operator_id = ApiClient.getCurrentUserId() ?: "wms_user",
+                    batch_number = null,
+                    is_urgent = false,
+                    notes = "货位管理页面转移操作"
+                )
+                
+                Log.d("WMS_LOCATION", "🔄 发送转移请求...")
+                val response = ApiClient.getApiService().transferInventory(request)
+                
+                runOnUiThread {
+                    if (response.isSuccessful) {
+                        val apiResponse = response.body()
+                        if (apiResponse?.success == true) {
+                            
+                            // 成功弹窗
+                            val successMessage = buildString {
+                                append("✅ 转移操作成功！\n")
+                                append("--------------------\n")
+                                append("SKU编码: ${item.sku_code}\n")
+                                append("从库位: $fromLocation\n")
+                                append("到库位: $toLocation\n")
+                                append("转移数量: $quantity 件\n")
+                                append("操作完成时间: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(java.util.Date())}")
+                            }
+                            
+                            AlertDialog.Builder(this@LocationActivity)
+                                .setTitle("🔄 转移结果")
+                                .setMessage(successMessage)
+                                .setPositiveButton("确定") { _, _ ->
+                                    // 转移操作成功后，刷新库位详情对话框
+                                    refreshLocationInventoryDialog()
+                                }
+                                .setCancelable(false)
+                                .show()
+                                
+                            Log.d("WMS_LOCATION", "✅ 转移成功: $successMessage")
+                            
+                        } else {
+                            // 失败弹窗
+                            val errorMessage = buildString {
+                                append("❌ 转移操作失败！\n")
+                                append("--------------------\n")
+                                append("SKU编码: ${item.sku_code}\n")
+                                append("从库位: $fromLocation\n")
+                                append("到库位: $toLocation\n")
+                                append("转移数量: $quantity 件\n")
+                                append("失败原因: ${apiResponse?.error_message ?: "未知错误"}")
+                            }
+                            
+                            AlertDialog.Builder(this@LocationActivity)
+                                .setTitle("❌ 转移失败")
+                                .setMessage(errorMessage)
+                                .setPositiveButton("确定", null)
+                                .show()
+                                
+                            Log.e("WMS_LOCATION", "❌ 转移失败: ${apiResponse?.error_message}")
+                        }
+                    } else {
+                        val errorBody = response.errorBody()?.string() ?: response.message()
+                        val errorMessage = buildString {
+                            append("❌ 转移操作失败！\n")
+                            append("--------------------\n")
+                            append("SKU编码: ${item.sku_code}\n")
+                            append("从库位: $fromLocation\n")
+                            append("到库位: $toLocation\n")
+                            append("转移数量: $quantity 件\n")
+                            append("错误代码: HTTP ${response.code()}\n")
+                            append("错误信息: $errorBody")
+                        }
+                        
+                        AlertDialog.Builder(this@LocationActivity)
+                            .setTitle("❌ 网络错误")
+                            .setMessage(errorMessage)
+                            .setPositiveButton("确定", null)
+                            .show()
+                            
+                        Log.e("WMS_LOCATION", "❌ HTTP错误: ${response.code()} - $errorBody")
+                    }
+                }
+                
+            } catch (e: Exception) {
+                Log.e("WMS_LOCATION", "❌ 转移操作异常: ${e.message}", e)
+                runOnUiThread {
+                    val errorMessage = buildString {
+                        append("❌ 转移操作异常！\n")
+                        append("--------------------\n")
+                        append("SKU编码: ${item.sku_code}\n")
+                        append("从库位: $fromLocation\n")
+                        append("到库位: $toLocation\n")
+                        append("转移数量: $quantity 件\n")
+                        append("异常信息: ${e.message}")
+                    }
+                    
+                    AlertDialog.Builder(this@LocationActivity)
+                        .setTitle("❌ 系统异常")
+                        .setMessage(errorMessage)
+                        .setPositiveButton("确定", null)
+                        .show()
+                }
+            }
+        }
     }
     
     // 显示库位入库对话框
@@ -863,6 +1314,70 @@ class LocationActivity : AppCompatActivity() {
         // TODO: 调用实际的盘点API
         // ApiClient.getApiService().startLocationInventoryCheck(location.location_code)
     }
+
+    // ===== 工具方法：库存/对话框刷新 =====
+    // 更新操作后刷新列表和对话框
+    private fun updateLocationInventoryAfterOperation(
+        locationCode: String,
+        skuCode: String,
+        newLocationQuantity: Int,
+        newTotalQuantity: Int
+    ) {
+        // 如果详情对话框打开且为同一库位，更新SKU数量
+        if (currentLocationCode == locationCode && currentInventoryAdapter != null) {
+            updateSkuQuantityInDialog(skuCode, newLocationQuantity)
+        }
+        // 更新主列表统计
+        updateLocationStatsInMainList(locationCode)
+    }
+
+    // 在库位详情对话框中更新某 SKU 数量
+    private fun updateSkuQuantityInDialog(skuCode: String, newQuantity: Int) {
+        currentInventoryAdapter?.let {
+            it.updateSkuQuantity(skuCode, newQuantity)
+            currentTotalQuantityTextView?.text = "总量: ${it.getTotalQuantity()}件"
+        }
+    }
+
+    // 重新获取库位汇总并刷新主列表
+    private fun updateLocationStatsInMainList(locationCode: String) {
+        lifecycleScope.launch {
+            try {
+                val resp = ApiClient.getApiService().getLocationInventory(locationCode)
+                if (resp.isSuccessful && resp.body()?.success == true) {
+                    val inv = resp.body()?.data
+                    val idx = locations.indexOfFirst { it.location.location_code == locationCode }
+                    if (idx != -1 && inv != null) {
+                        locations[idx].skuCount = inv.summary?.total_items ?: 0
+                        locations[idx].totalQuantity = inv.summary?.total_quantity ?: 0
+                        runOnUiThread { locationAdapter.notifyItemChanged(idx) }
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
+    // 刷新已经打开的库位详情对话框
+    private fun refreshLocationInventoryDialog() {
+        if (currentLocationCode.isNotEmpty() && currentInventoryRecyclerView != null) {
+            loadLocationInventoryForDialog(
+                currentLocationCode,
+                currentInventoryRecyclerView!!,
+                currentTotalSkuTextView!!,
+                currentTotalQuantityTextView!!
+            )
+        }
+    }
+
+    // 关闭详情对话框时清理引用
+    private fun clearCurrentDialogReferences() {
+        currentInventoryDialog = null
+        currentInventoryRecyclerView = null
+        currentInventoryAdapter = null
+        currentTotalSkuTextView = null
+        currentTotalQuantityTextView = null
+        currentLocationCode = ""
+    }
 }
 
 // 带统计信息的库位数据类
@@ -943,7 +1458,7 @@ class LocationAdapter(
 
 // 库位库存图片网格适配器
 class LocationInventoryGridAdapter(
-    private val items: List<LocationInventoryItem>,
+    private val items: MutableList<LocationInventoryItem>,
     private val onItemClick: (LocationInventoryItem) -> Unit
 ) : RecyclerView.Adapter<LocationInventoryGridAdapter.GridViewHolder>() {
     
@@ -1125,6 +1640,25 @@ class LocationInventoryGridAdapter(
 
     
     override fun getItemCount(): Int = items.size
+    
+    // 更新特定SKU的数量
+    fun updateSkuQuantity(skuCode: String, newQuantity: Int) {
+        val itemIndex = items.indexOfFirst { it.sku_code == skuCode }
+        if (itemIndex != -1) {
+            // 创建一个新的item对象来更新数量
+            val updatedItem = items[itemIndex].copy(stock_quantity = newQuantity)
+            items[itemIndex] = updatedItem
+            notifyItemChanged(itemIndex)
+            Log.d("WMS_LOCATION", "✅ 已更新SKU $skuCode 的数量为 $newQuantity")
+        } else {
+            Log.w("WMS_LOCATION", "⚠️ 未找到SKU $skuCode 进行数量更新")
+        }
+    }
+    
+    // 获取所有SKU的总数量
+    fun getTotalQuantity(): Int {
+        return items.sumOf { it.stock_quantity }
+    }
     
     // 根据SKU编码生成唯一的占位图片
     private fun getSkuBasedImage(skuCode: String): Int {

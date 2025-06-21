@@ -110,9 +110,9 @@
                 android:layout_width="60dp"
                 android:layout_height="48dp"
                 android:background="#3498db"
-                android:text="👁"
+                android:text="详情"
                 android:textColor="#ffffff"
-                android:textSize="16sp"
+                android:textSize="14sp"
                 android:layout_marginEnd="6dp"
                 android:minWidth="60dp"
                 android:minHeight="48dp" />
