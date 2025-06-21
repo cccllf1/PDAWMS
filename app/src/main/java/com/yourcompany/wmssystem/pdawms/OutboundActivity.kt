@@ -97,6 +97,9 @@ class OutboundListAdapter(
                 .load(processedImageUrl)
                 .placeholder(android.R.drawable.ic_menu_gallery)
                 .error(android.R.drawable.ic_menu_gallery)
+                .thumbnail(0.1f)
+                .override(200,200)
+                .centerCrop()
                 .into(holder.imgProduct)
         } else {
             holder.imgProduct.setImageResource(android.R.drawable.ic_menu_gallery)
@@ -229,6 +232,9 @@ class OutboundListAdapter(
                                     .load(processedImageUrl)
                                     .placeholder(android.R.drawable.ic_menu_gallery)
                                     .error(android.R.drawable.ic_menu_gallery)
+                                    .thumbnail(0.1f)
+                                    .override(200,200)
+                                    .centerCrop()
                                     .into(holder.imgProduct)
                                 items[holder.adapterPosition].imageUrl = selectedColor.imagePath
                             }

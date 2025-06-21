@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.CoroutineScope
 import java.net.URL
+import com.bumptech.glide.Glide
 
 class LocationActivity : AppCompatActivity() {
     
@@ -1542,9 +1543,16 @@ class LocationInventoryGridAdapter(
                 // 使用ApiClient构建完整的图片URL
                 val fullImageUrl = ApiClient.processImageUrl(item.image_path, imageView.context)
                 Log.d("WMS_LOCATION", "🌐 完整图片URL: $fullImageUrl")
-                
-                // 加载网络图片
-                loadNetworkImage(fullImageUrl, imageView, skuBasedImage)
+
+                // 使用 Glide 高效加载缩略图，限制解码尺寸
+                Glide.with(imageView.context)
+                    .load(fullImageUrl)
+                    .placeholder(skuBasedImage)
+                    .error(skuBasedImage)
+                    .thumbnail(0.1f)            // 先加载 10% 缩略
+                    .override(200, 200)         // 最大 200×200 像素
+                    .centerCrop()
+                    .into(imageView)
             } else {
                 Log.d("WMS_LOCATION", "📷 SKU ${item.sku_code} 无图片路径，使用占位图")
             }
@@ -1552,71 +1560,6 @@ class LocationInventoryGridAdapter(
         } catch (e: Exception) {
             Log.w("WMS_LOCATION", "加载图片失败: ${e.message}")
             imageView.setImageResource(android.R.drawable.ic_menu_gallery)
-        }
-    }
-    
-    private fun loadNetworkImage(imageUrl: String, imageView: ImageView, fallbackImage: Int) {
-        // 使用协程在后台线程加载图片
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                Log.d("WMS_LOCATION", "🌐 开始加载网络图片: $imageUrl")
-                
-                val url = java.net.URL(imageUrl)
-                val connection = url.openConnection()
-                connection.doInput = true
-                connection.connect()
-                
-                val inputStream = connection.getInputStream()
-                
-                // 先获取图片尺寸，避免直接加载大图导致OOM
-                val options = android.graphics.BitmapFactory.Options()
-                options.inJustDecodeBounds = true
-                android.graphics.BitmapFactory.decodeStream(inputStream, null, options)
-                inputStream.close()
-                
-                // 重新打开连接获取图片数据
-                val connection2 = url.openConnection()
-                connection2.doInput = true
-                connection2.connect()
-                val inputStream2 = connection2.getInputStream()
-                
-                // 计算合适的缩放比例（目标尺寸：200x200像素）
-                val targetSize = 200
-                val sampleSize = calculateInSampleSize(options, targetSize, targetSize)
-                
-                // 使用缩放比例加载图片
-                val decodeOptions = android.graphics.BitmapFactory.Options()
-                decodeOptions.inSampleSize = sampleSize
-                decodeOptions.inPreferredConfig = android.graphics.Bitmap.Config.RGB_565 // 使用更少内存的格式
-                
-                val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream2, null, decodeOptions)
-                inputStream2.close()
-                
-                if (bitmap != null) {
-                    // 在主线程更新UI
-                    withContext(Dispatchers.Main) {
-                        Log.d("WMS_LOCATION", "✅ 网络图片加载成功，尺寸: ${bitmap.width}x${bitmap.height}")
-                        imageView.setImageBitmap(bitmap)
-                    }
-                } else {
-                    Log.w("WMS_LOCATION", "⚠️ 网络图片解码失败，使用占位图")
-                    withContext(Dispatchers.Main) {
-                        imageView.setImageResource(fallbackImage)
-                    }
-                }
-                
-            } catch (e: OutOfMemoryError) {
-                Log.e("WMS_LOCATION", "❌ 图片加载内存溢出: ${e.message}")
-                withContext(Dispatchers.Main) {
-                    imageView.setImageResource(fallbackImage)
-                }
-            } catch (e: Exception) {
-                Log.w("WMS_LOCATION", "❌ 网络图片加载失败: ${e.message}")
-                // 加载失败时在主线程显示占位图
-                withContext(Dispatchers.Main) {
-                    imageView.setImageResource(fallbackImage)
-                }
-            }
         }
     }
     

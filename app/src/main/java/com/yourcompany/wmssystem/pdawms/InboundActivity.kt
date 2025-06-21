@@ -139,6 +139,9 @@ class InboundListAdapter(
                         .load(item.image_url)
                         .placeholder(android.R.drawable.ic_menu_gallery)
                         .error(android.R.drawable.ic_menu_gallery)
+                        .thumbnail(0.1f)
+                        .override(200,200)
+                        .centerCrop()
                         .into(holder.imgProduct)
                     Log.d("InboundAdapter", "加载图片: ${item.image_url}")
                 } catch (e: Exception) {

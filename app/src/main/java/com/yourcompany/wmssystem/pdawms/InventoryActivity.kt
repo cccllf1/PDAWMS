@@ -248,8 +248,11 @@ class ColorImageAdapter(
         val imageUrl = ApiClient.processImageUrl(item.image_path, holder.itemView.context)
         Glide.with(holder.itemView.context)
             .load(imageUrl)
-            .placeholder(R.drawable.ic_launcher_background)
-            .error(R.drawable.ic_launcher_background)
+            .placeholder(android.R.drawable.ic_menu_gallery)
+            .error(android.R.drawable.ic_menu_gallery)
+            .thumbnail(0.1f)
+            .override(200,200)
+            .centerCrop()
             .into(holder.imgColor)
     }
 
