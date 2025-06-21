@@ -30,6 +30,7 @@ class LocationActivity : AppCompatActivity() {
     private lateinit var locationAdapter: LocationAdapter
     private val locations = mutableListOf<LocationWithStats>()
     private val allLocations = mutableListOf<LocationWithStats>()
+    private var currentLocationCode: String = "" // 当前操作的库位编码
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -272,11 +273,14 @@ class LocationActivity : AppCompatActivity() {
         val recyclerViewGrid = dialogView.findViewById<RecyclerView>(R.id.recyclerViewInventoryGrid)
         val btnClose = dialogView.findViewById<Button>(R.id.btnClose)
         val btnCloseDialog = dialogView.findViewById<Button>(R.id.btnCloseDialog)
-        val btnAddStock = dialogView.findViewById<Button>(R.id.btnAddStock)
+
         
         // 设置标题（只显示库位编码）
         val location = locationWithStats.location
         txtDialogTitle.text = location.location_code
+        
+        // 设置当前库位编码，供SKU操作使用
+        currentLocationCode = location.location_code
         
         // 设置统计信息
         txtTotalSku.text = "SKU: ${locationWithStats.skuCount}"
@@ -291,9 +295,6 @@ class LocationActivity : AppCompatActivity() {
         // 设置点击事件
         btnClose.setOnClickListener { dialog.dismiss() }
         btnCloseDialog.setOnClickListener { dialog.dismiss() }
-        btnAddStock.setOnClickListener {
-            Toast.makeText(this, "上架功能开发中...", Toast.LENGTH_SHORT).show()
-        }
         
         dialog.show()
         
@@ -335,7 +336,9 @@ class LocationActivity : AppCompatActivity() {
                             
                             // 设置图片网格适配器
                             Log.d("WMS_LOCATION", "🔧 创建适配器，共${items.size}个条目")
-                            val gridAdapter = LocationInventoryGridAdapter(items)
+                            val gridAdapter = LocationInventoryGridAdapter(items) { item ->
+                                showSkuOperationMenu(this@LocationActivity, item)
+                            }
                             recyclerView.adapter = gridAdapter
                             Log.d("WMS_LOCATION", "🔧 适配器已设置到RecyclerView")
                             
@@ -478,6 +481,388 @@ class LocationActivity : AppCompatActivity() {
             }
         }
     }
+
+    // 显示SKU操作菜单
+    private fun showSkuOperationMenu(context: android.content.Context, item: LocationInventoryItem) {
+        val skuCode = item.sku_code ?: "未知SKU"
+        val quantity = item.stock_quantity ?: 0
+        val unit = item.unit ?: "件"
+        val productName = item.product_name ?: "未知商品"
+        
+        // 创建自定义对话框
+        val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_sku_operation, null)
+        val dialog = AlertDialog.Builder(context)
+            .setView(dialogView)
+            .create()
+        
+        // 设置标题和信息
+        dialogView.findViewById<TextView>(R.id.txtSkuTitle).text = "SKU操作: $skuCode"
+        dialogView.findViewById<TextView>(R.id.txtSkuInfo).text = "SKU编码: $skuCode\n库存: $quantity $unit\n商品: $productName"
+        
+        // 设置按钮点击事件
+        dialogView.findViewById<Button>(R.id.btnInbound).setOnClickListener {
+            dialog.dismiss()
+            performInboundOperation(context, item)
+        }
+        
+        dialogView.findViewById<Button>(R.id.btnOutbound).setOnClickListener {
+            dialog.dismiss()
+            performOutboundOperation(context, item)
+        }
+        
+        dialogView.findViewById<Button>(R.id.btnInventory).setOnClickListener {
+            dialog.dismiss()
+            performInventoryOperation(context, item)
+        }
+        
+        dialogView.findViewById<Button>(R.id.btnTransfer).setOnClickListener {
+            dialog.dismiss()
+            performTransferOperation(context, item)
+        }
+        
+        dialogView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
+            dialog.dismiss()
+        }
+        
+        dialog.show()
+    }
+    
+    // 入库操作
+    private fun performInboundOperation(context: android.content.Context, item: LocationInventoryItem) {
+        Log.d("WMS_LOCATION", "🔄 执行入库操作: ${item.sku_code}")
+        
+        val input = EditText(context).apply {
+            hint = "请输入入库数量"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText("1")
+        }
+        
+        AlertDialog.Builder(context)
+            .setTitle("📦 入库操作")
+            .setMessage("库位: ${currentLocationCode}\nSKU: ${item.sku_code}\n当前库存: ${item.stock_quantity} ${item.unit ?: "件"}")
+            .setView(input)
+            .setPositiveButton("确认入库") { _, _ ->
+                val quantity = input.text.toString().toIntOrNull() ?: 0
+                if (quantity > 0) {
+                    executeSkuInboundOperation(context, currentLocationCode, item, quantity)
+                } else {
+                    Toast.makeText(context, "请输入有效的入库数量", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+    
+    // 出库操作
+    private fun performOutboundOperation(context: android.content.Context, item: LocationInventoryItem) {
+        Log.d("WMS_LOCATION", "🔄 执行出库操作: ${item.sku_code}")
+        
+        val input = EditText(context).apply {
+            hint = "请输入出库数量"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText("1")
+        }
+        
+        AlertDialog.Builder(context)
+            .setTitle("📤 出库操作")
+            .setMessage("库位: ${currentLocationCode}\nSKU: ${item.sku_code}\n当前库存: ${item.stock_quantity} ${item.unit ?: "件"}")
+            .setView(input)
+            .setPositiveButton("确认出库") { _, _ ->
+                val quantity = input.text.toString().toIntOrNull() ?: 0
+                val currentStock = item.stock_quantity ?: 0
+                
+                if (quantity > 0) {
+                    if (quantity <= currentStock) {
+                        executeSkuOutboundOperation(context, currentLocationCode, item, quantity)
+                    } else {
+                        Toast.makeText(context, "出库数量不能超过当前库存($currentStock)", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(context, "请输入有效的出库数量", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+    
+    // 盘点操作
+    private fun performInventoryOperation(context: android.content.Context, item: LocationInventoryItem) {
+        Log.d("WMS_LOCATION", "🔄 执行盘点操作: ${item.sku_code}")
+        
+        val input = EditText(context).apply {
+            hint = "请输入实际盘点数量"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText("${item.stock_quantity ?: 0}")
+        }
+        
+        AlertDialog.Builder(context)
+            .setTitle("📋 盘点操作")
+            .setMessage("库位: ${currentLocationCode}\nSKU: ${item.sku_code}\n系统库存: ${item.stock_quantity} ${item.unit ?: "件"}")
+            .setView(input)
+            .setPositiveButton("确认盘点") { _, _ ->
+                val actualQuantity = input.text.toString().toIntOrNull()
+                if (actualQuantity != null && actualQuantity >= 0) {
+                    executeSkuInventoryOperation(context, currentLocationCode, item, actualQuantity)
+                } else {
+                    Toast.makeText(context, "请输入有效的盘点数量", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+    
+    // 转移操作
+    private fun performTransferOperation(context: android.content.Context, item: LocationInventoryItem) {
+        Log.d("WMS_LOCATION", "🔄 执行转移操作: ${item.sku_code}")
+        
+        val input = EditText(context).apply {
+            hint = "请输入目标库位编码"
+            inputType = android.text.InputType.TYPE_CLASS_TEXT
+        }
+        
+        AlertDialog.Builder(context)
+            .setTitle("🔄 转移操作")
+            .setMessage("库位: ${currentLocationCode}\nSKU: ${item.sku_code}\n当前库存: ${item.stock_quantity} ${item.unit ?: "件"}")
+            .setView(input)
+            .setPositiveButton("下一步") { _, _ ->
+                val targetLocation = input.text.toString().trim()
+                if (targetLocation.isNotEmpty()) {
+                    showTransferQuantityDialog(context, item, targetLocation)
+                } else {
+                    Toast.makeText(context, "请输入目标库位编码", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+    
+    // 显示转移数量对话框
+    private fun showTransferQuantityDialog(context: android.content.Context, item: LocationInventoryItem, targetLocation: String) {
+        val input = EditText(context).apply {
+            hint = "请输入转移数量"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText("1")
+        }
+        
+        AlertDialog.Builder(context)
+            .setTitle("🔄 确认转移")
+            .setMessage("从库位: ${currentLocationCode}\n到库位: $targetLocation\nSKU: ${item.sku_code}")
+            .setView(input)
+            .setPositiveButton("确认转移") { _, _ ->
+                val quantity = input.text.toString().toIntOrNull() ?: 0
+                val currentStock = item.stock_quantity ?: 0
+                
+                if (quantity > 0) {
+                    if (quantity <= currentStock) {
+                        executeSkuTransferOperation(context, currentLocationCode, targetLocation, item, quantity)
+                    } else {
+                        Toast.makeText(context, "转移数量不能超过当前库存($currentStock)", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(context, "请输入有效的转移数量", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+    
+    // 查看详情
+    private fun showSkuDetails(context: android.content.Context, item: LocationInventoryItem) {
+        val skuCode = item.sku_code ?: "未知SKU"
+        val quantity = item.stock_quantity ?: 0
+        val unit = item.unit ?: "件"
+        val productName = item.product_name ?: "未知商品"
+        
+        val message = "SKU编码: $skuCode\n商品名称: $productName\n当前库存: $quantity $unit"
+        
+        AlertDialog.Builder(context)
+            .setTitle("ℹ️ SKU详情")
+            .setMessage(message)
+            .setPositiveButton("确定", null)
+            .show()
+    }
+    
+    // 执行SKU入库操作
+    private fun executeSkuInboundOperation(context: android.content.Context, locationCode: String, item: LocationInventoryItem, quantity: Int) {
+        // TODO: 调用入库API
+        Log.d("WMS_LOCATION", "✅ SKU入库操作: 库位=$locationCode, SKU=${item.sku_code}, 数量=$quantity")
+        Toast.makeText(context, "入库成功！\n库位: $locationCode\nSKU: ${item.sku_code}\n数量: $quantity", Toast.LENGTH_LONG).show()
+        
+        // 这里可以添加实际的API调用
+        // ApiClient.getApiService().performSkuInbound(locationCode, item.sku_code, quantity)
+    }
+    
+    // 执行SKU出库操作
+    private fun executeSkuOutboundOperation(context: android.content.Context, locationCode: String, item: LocationInventoryItem, quantity: Int) {
+        // TODO: 调用出库API
+        Log.d("WMS_LOCATION", "✅ SKU出库操作: 库位=$locationCode, SKU=${item.sku_code}, 数量=$quantity")
+        Toast.makeText(context, "出库成功！\n库位: $locationCode\nSKU: ${item.sku_code}\n数量: $quantity", Toast.LENGTH_LONG).show()
+        
+        // 这里可以添加实际的API调用
+        // ApiClient.getApiService().performSkuOutbound(locationCode, item.sku_code, quantity)
+    }
+    
+    // 执行SKU盘点操作
+    private fun executeSkuInventoryOperation(context: android.content.Context, locationCode: String, item: LocationInventoryItem, actualQuantity: Int) {
+        val systemQuantity = item.stock_quantity ?: 0
+        val difference = actualQuantity - systemQuantity
+        
+        Log.d("WMS_LOCATION", "✅ SKU盘点操作: 库位=$locationCode, SKU=${item.sku_code}, 系统库存=$systemQuantity, 实际库存=$actualQuantity, 差异=$difference")
+        
+        val message = if (difference == 0) {
+            "盘点完成！库存数量准确无误"
+        } else {
+            "盘点完成！发现差异: ${if (difference > 0) "+" else ""}$difference"
+        }
+        
+        Toast.makeText(context, "$message\n库位: $locationCode\nSKU: ${item.sku_code}", Toast.LENGTH_LONG).show()
+        
+        // 这里可以添加实际的API调用
+        // ApiClient.getApiService().performSkuInventoryAdjustment(locationCode, item.sku_code, actualQuantity)
+    }
+    
+    // 执行SKU转移操作
+    private fun executeSkuTransferOperation(context: android.content.Context, fromLocation: String, toLocation: String, item: LocationInventoryItem, quantity: Int) {
+        // TODO: 调用转移API
+        Log.d("WMS_LOCATION", "✅ SKU转移操作: 从库位=$fromLocation, 到库位=$toLocation, SKU=${item.sku_code}, 数量=$quantity")
+        Toast.makeText(context, "转移成功！\n从库位: $fromLocation\n到库位: $toLocation\nSKU: ${item.sku_code}\n数量: $quantity", Toast.LENGTH_LONG).show()
+        
+        // 这里可以添加实际的API调用
+        // ApiClient.getApiService().performSkuTransfer(fromLocation, toLocation, item.sku_code, quantity)
+    }
+    
+    // 显示库位入库对话框
+    private fun showLocationInboundDialog(location: Location) {
+        val input = EditText(this).apply {
+            hint = "请输入SKU编码"
+            inputType = android.text.InputType.TYPE_CLASS_TEXT
+        }
+        
+        AlertDialog.Builder(this)
+            .setTitle("📦 库位入库")
+            .setMessage("库位: ${location.location_code}")
+            .setView(input)
+            .setPositiveButton("下一步") { _, _ ->
+                val skuCode = input.text.toString().trim()
+                if (skuCode.isNotEmpty()) {
+                    showInboundQuantityDialog(location, skuCode)
+                } else {
+                    Toast.makeText(this, "请输入SKU编码", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+    
+    // 显示入库数量对话框
+    private fun showInboundQuantityDialog(location: Location, skuCode: String) {
+        val input = EditText(this).apply {
+            hint = "请输入入库数量"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText("1")
+        }
+        
+        AlertDialog.Builder(this)
+            .setTitle("📦 确认入库")
+            .setMessage("库位: ${location.location_code}\nSKU: $skuCode")
+            .setView(input)
+            .setPositiveButton("确认入库") { _, _ ->
+                val quantity = input.text.toString().toIntOrNull() ?: 0
+                if (quantity > 0) {
+                    executeLocationInbound(location, skuCode, quantity)
+                } else {
+                    Toast.makeText(this, "请输入有效的入库数量", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+    
+    // 显示库位出库对话框
+    private fun showLocationOutboundDialog(location: Location) {
+        val input = EditText(this).apply {
+            hint = "请输入SKU编码"
+            inputType = android.text.InputType.TYPE_CLASS_TEXT
+        }
+        
+        AlertDialog.Builder(this)
+            .setTitle("📤 库位出库")
+            .setMessage("库位: ${location.location_code}")
+            .setView(input)
+            .setPositiveButton("下一步") { _, _ ->
+                val skuCode = input.text.toString().trim()
+                if (skuCode.isNotEmpty()) {
+                    showOutboundQuantityDialog(location, skuCode)
+                } else {
+                    Toast.makeText(this, "请输入SKU编码", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+    
+    // 显示出库数量对话框
+    private fun showOutboundQuantityDialog(location: Location, skuCode: String) {
+        val input = EditText(this).apply {
+            hint = "请输入出库数量"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText("1")
+        }
+        
+        AlertDialog.Builder(this)
+            .setTitle("📤 确认出库")
+            .setMessage("库位: ${location.location_code}\nSKU: $skuCode")
+            .setView(input)
+            .setPositiveButton("确认出库") { _, _ ->
+                val quantity = input.text.toString().toIntOrNull() ?: 0
+                if (quantity > 0) {
+                    executeLocationOutbound(location, skuCode, quantity)
+                } else {
+                    Toast.makeText(this, "请输入有效的出库数量", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+    
+    // 显示库位盘点对话框
+    private fun showLocationInventoryCountDialog(location: Location) {
+        AlertDialog.Builder(this)
+            .setTitle("📋 库位盘点")
+            .setMessage("库位: ${location.location_code}\n\n开始对该库位进行全面盘点？")
+            .setPositiveButton("开始盘点") { _, _ ->
+                executeLocationInventoryCheck(location)
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+    
+    // 执行库位入库
+    private fun executeLocationInbound(location: Location, skuCode: String, quantity: Int) {
+        Log.d("WMS_LOCATION", "✅ 库位入库: 库位=${location.location_code}, SKU=$skuCode, 数量=$quantity")
+        Toast.makeText(this, "入库成功！\n库位: ${location.location_code}\nSKU: $skuCode\n数量: $quantity", Toast.LENGTH_LONG).show()
+        
+        // TODO: 调用实际的入库API
+        // ApiClient.getApiService().performLocationInbound(location.location_code, skuCode, quantity)
+    }
+    
+    // 执行库位出库
+    private fun executeLocationOutbound(location: Location, skuCode: String, quantity: Int) {
+        Log.d("WMS_LOCATION", "✅ 库位出库: 库位=${location.location_code}, SKU=$skuCode, 数量=$quantity")
+        Toast.makeText(this, "出库成功！\n库位: ${location.location_code}\nSKU: $skuCode\n数量: $quantity", Toast.LENGTH_LONG).show()
+        
+        // TODO: 调用实际的出库API
+        // ApiClient.getApiService().performLocationOutbound(location.location_code, skuCode, quantity)
+    }
+    
+    // 执行库位盘点
+    private fun executeLocationInventoryCheck(location: Location) {
+        Log.d("WMS_LOCATION", "✅ 库位盘点: 库位=${location.location_code}")
+        Toast.makeText(this, "盘点完成！\n库位: ${location.location_code}\n状态: 盘点中...", Toast.LENGTH_LONG).show()
+        
+        // TODO: 调用实际的盘点API
+        // ApiClient.getApiService().startLocationInventoryCheck(location.location_code)
+    }
 }
 
 // 带统计信息的库位数据类
@@ -558,7 +943,8 @@ class LocationAdapter(
 
 // 库位库存图片网格适配器
 class LocationInventoryGridAdapter(
-    private val items: List<LocationInventoryItem>
+    private val items: List<LocationInventoryItem>,
+    private val onItemClick: (LocationInventoryItem) -> Unit
 ) : RecyclerView.Adapter<LocationInventoryGridAdapter.GridViewHolder>() {
     
     class GridViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -608,11 +994,11 @@ class LocationInventoryGridAdapter(
         // 加载商品图片作为背景
         loadProductImage(item, holder.imgProduct)
         
-        // 点击事件 - 显示SKU操作菜单
+        // 点击事件 - 通过回调调用Activity的方法
         holder.itemView.setOnClickListener {
             try {
                 Log.d("WMS_LOCATION", "📱 点击SKU卡片: ${item.sku_code}")
-                showSkuOperationMenu(holder.itemView.context, item)
+                onItemClick(item)
                 
             } catch (e: Exception) {
                 Log.e("WMS_LOCATION", "❌ 显示SKU操作菜单失败: ${e.message}", e)
@@ -804,171 +1190,4 @@ class LocationInventoryGridAdapter(
         return drawable
     }
     
-    // 显示SKU操作菜单
-    private fun showSkuOperationMenu(context: android.content.Context, item: LocationInventoryItem) {
-        val skuCode = item.sku_code ?: "未知SKU"
-        val quantity = item.stock_quantity ?: 0
-        val unit = item.unit ?: "件"
-        val productName = item.product_name ?: "未知商品"
-        
-        val options = arrayOf(
-            "📦 入库操作",
-            "📤 出库操作", 
-            "📋 盘点操作",
-            "ℹ️ 查看详情"
-        )
-        
-        AlertDialog.Builder(context)
-            .setTitle("SKU操作: $skuCode")
-            .setMessage("当前库存: $quantity $unit\n商品: $productName")
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> performInboundOperation(context, item)
-                    1 -> performOutboundOperation(context, item)
-                    2 -> performInventoryOperation(context, item)
-                    3 -> showSkuDetails(context, item)
-                }
-            }
-            .setNegativeButton("取消", null)
-            .show()
-    }
-    
-    // 入库操作
-    private fun performInboundOperation(context: android.content.Context, item: LocationInventoryItem) {
-        Log.d("WMS_LOCATION", "🔄 执行入库操作: ${item.sku_code}")
-        
-        val input = EditText(context).apply {
-            hint = "请输入入库数量"
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER
-            setText("1")
-        }
-        
-        AlertDialog.Builder(context)
-            .setTitle("📦 入库操作")
-            .setMessage("SKU: ${item.sku_code}\n当前库存: ${item.stock_quantity} ${item.unit ?: "件"}")
-            .setView(input)
-            .setPositiveButton("确认入库") { _, _ ->
-                val quantity = input.text.toString().toIntOrNull() ?: 0
-                if (quantity > 0) {
-                    executeInboundOperation(context, item, quantity)
-                } else {
-                    Toast.makeText(context, "请输入有效的入库数量", Toast.LENGTH_SHORT).show()
-                }
-            }
-            .setNegativeButton("取消", null)
-            .show()
-    }
-    
-    // 出库操作
-    private fun performOutboundOperation(context: android.content.Context, item: LocationInventoryItem) {
-        Log.d("WMS_LOCATION", "🔄 执行出库操作: ${item.sku_code}")
-        
-        val input = EditText(context).apply {
-            hint = "请输入出库数量"
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER
-            setText("1")
-        }
-        
-        AlertDialog.Builder(context)
-            .setTitle("📤 出库操作")
-            .setMessage("SKU: ${item.sku_code}\n当前库存: ${item.stock_quantity} ${item.unit ?: "件"}")
-            .setView(input)
-            .setPositiveButton("确认出库") { _, _ ->
-                val quantity = input.text.toString().toIntOrNull() ?: 0
-                val currentStock = item.stock_quantity ?: 0
-                
-                if (quantity > 0) {
-                    if (quantity <= currentStock) {
-                        executeOutboundOperation(context, item, quantity)
-                    } else {
-                        Toast.makeText(context, "出库数量不能超过当前库存($currentStock)", Toast.LENGTH_SHORT).show()
-                    }
-                } else {
-                    Toast.makeText(context, "请输入有效的出库数量", Toast.LENGTH_SHORT).show()
-                }
-            }
-            .setNegativeButton("取消", null)
-            .show()
-    }
-    
-    // 盘点操作
-    private fun performInventoryOperation(context: android.content.Context, item: LocationInventoryItem) {
-        Log.d("WMS_LOCATION", "🔄 执行盘点操作: ${item.sku_code}")
-        
-        val input = EditText(context).apply {
-            hint = "请输入实际盘点数量"
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER
-            setText("${item.stock_quantity ?: 0}")
-        }
-        
-        AlertDialog.Builder(context)
-            .setTitle("📋 盘点操作")
-            .setMessage("SKU: ${item.sku_code}\n系统库存: ${item.stock_quantity} ${item.unit ?: "件"}")
-            .setView(input)
-            .setPositiveButton("确认盘点") { _, _ ->
-                val actualQuantity = input.text.toString().toIntOrNull()
-                if (actualQuantity != null && actualQuantity >= 0) {
-                    executeInventoryOperation(context, item, actualQuantity)
-                } else {
-                    Toast.makeText(context, "请输入有效的盘点数量", Toast.LENGTH_SHORT).show()
-                }
-            }
-            .setNegativeButton("取消", null)
-            .show()
-    }
-    
-    // 查看详情
-    private fun showSkuDetails(context: android.content.Context, item: LocationInventoryItem) {
-        val skuCode = item.sku_code ?: "未知SKU"
-        val quantity = item.stock_quantity ?: 0
-        val unit = item.unit ?: "件"
-        val productName = item.product_name ?: "未知商品"
-        
-        val message = "SKU编码: $skuCode\n商品名称: $productName\n当前库存: $quantity $unit"
-        
-        AlertDialog.Builder(context)
-            .setTitle("ℹ️ SKU详情")
-            .setMessage(message)
-            .setPositiveButton("确定", null)
-            .show()
-    }
-    
-    // 执行入库操作
-    private fun executeInboundOperation(context: android.content.Context, item: LocationInventoryItem, quantity: Int) {
-        // TODO: 调用入库API
-        Log.d("WMS_LOCATION", "✅ 入库操作: SKU=${item.sku_code}, 数量=$quantity")
-        Toast.makeText(context, "入库成功！SKU: ${item.sku_code}, 数量: $quantity", Toast.LENGTH_LONG).show()
-        
-        // 这里可以添加实际的API调用
-        // ApiClient.getApiService().performInbound(...)
-    }
-    
-    // 执行出库操作
-    private fun executeOutboundOperation(context: android.content.Context, item: LocationInventoryItem, quantity: Int) {
-        // TODO: 调用出库API
-        Log.d("WMS_LOCATION", "✅ 出库操作: SKU=${item.sku_code}, 数量=$quantity")
-        Toast.makeText(context, "出库成功！SKU: ${item.sku_code}, 数量: $quantity", Toast.LENGTH_LONG).show()
-        
-        // 这里可以添加实际的API调用
-        // ApiClient.getApiService().performOutbound(...)
-    }
-    
-    // 执行盘点操作
-    private fun executeInventoryOperation(context: android.content.Context, item: LocationInventoryItem, actualQuantity: Int) {
-        val systemQuantity = item.stock_quantity ?: 0
-        val difference = actualQuantity - systemQuantity
-        
-        Log.d("WMS_LOCATION", "✅ 盘点操作: SKU=${item.sku_code}, 系统库存=$systemQuantity, 实际库存=$actualQuantity, 差异=$difference")
-        
-        val message = if (difference == 0) {
-            "盘点完成！库存数量准确无误"
-        } else {
-            "盘点完成！发现差异: ${if (difference > 0) "+" else ""}$difference"
-        }
-        
-        Toast.makeText(context, "$message\nSKU: ${item.sku_code}", Toast.LENGTH_LONG).show()
-        
-        // 这里可以添加实际的API调用
-        // ApiClient.getApiService().performInventoryAdjustment(...)
-    }
-} 
+}
