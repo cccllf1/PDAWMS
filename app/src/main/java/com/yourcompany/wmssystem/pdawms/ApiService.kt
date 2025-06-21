@@ -56,6 +56,20 @@ interface ApiService {
     @GET("api/locations/code/{location_code}")
     suspend fun getLocationByCode(@Path("location_code") location_code: String): Response<ApiResponse<Location>>
     
+    // 新增库位管理API
+    @POST("api/locations")
+    suspend fun createLocation(@Body request: CreateLocationRequest): Response<ApiResponse<Location>>
+    
+    @PUT("api/locations/{id}")
+    suspend fun updateLocation(@Path("id") id: String, @Body request: UpdateLocationRequest): Response<ApiResponse<Location>>
+    
+    @DELETE("api/locations/{id}")
+    suspend fun deleteLocation(@Path("id") id: String): Response<ApiResponse<Any>>
+    
+    // 获取库位库存详情 - 使用正确的API端点
+    @GET("api/inventory/location")
+    suspend fun getLocationInventory(@Query("location_code") location_code: String? = null): Response<ApiResponse<LocationInventoryResponse>>
+    
     // 入库操作
     @POST("api/inbound")
     suspend fun inbound(@Body request: InboundRequest): Response<InboundResponse>

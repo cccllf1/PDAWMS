@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#ffffff"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?android:attr/selectableItemBackground">
+
+    <!-- 主要信息行 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="12dp"
+        android:gravity="center_vertical">
+
+        <!-- 库位编码 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1.5"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/txtLocationCode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="7788"
+                android:textColor="#2c3e50"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/txtLocationCategory"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="仓库: A区 / 货架: 1排"
+                android:textColor="#7f8c8d"
+                android:textSize="10sp"
+                android:layout_marginTop="2dp" />
+
+        </LinearLayout>
+
+        <!-- 库位名称 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="6dp">
+
+            <TextView
+                android:id="@+id/txtLocationName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="主货架A1"
+                android:textColor="#34495e"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/txtDescription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="重点区域"
+                android:textColor="#7f8c8d"
+                android:textSize="10sp"
+                android:layout_marginTop="2dp" />
+
+        </LinearLayout>
+
+        <!-- SKU数量信息 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.8"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <TextView
+                android:id="@+id/txtSkuCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2"
+                android:textColor="#e74c3c"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SKU"
+                android:textColor="#95a5a6"
+                android:textSize="9sp" />
+
+        </LinearLayout>
+
+        <!-- 操作按钮 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1.7"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <Button
+                android:id="@+id/btnViewDetails"
+                android:layout_width="60dp"
+                android:layout_height="48dp"
+                android:background="#3498db"
+                android:text="👁"
+                android:textColor="#ffffff"
+                android:textSize="16sp"
+                android:layout_marginEnd="6dp"
+                android:minWidth="60dp"
+                android:minHeight="48dp" />
+
+            <Button
+                android:id="@+id/btnEditLocation"
+                android:layout_width="60dp"
+                android:layout_height="48dp"
+                android:background="#f39c12"
+                android:text="✏"
+                android:textColor="#ffffff"
+                android:textSize="16sp"
+                android:minWidth="60dp"
+                android:minHeight="48dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- 库存统计信息（展开时显示） -->
+    <LinearLayout
+        android:id="@+id/layoutInventoryStats"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="8dp"
+        android:background="#f8f9fa"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="商品种数:"
+            android:textColor="#7f8c8d"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/txtProductCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="1"
+            android:textColor="#27ae60"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:layout_marginEnd="16dp" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="合计件数:"
+            android:textColor="#7f8c8d"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/txtTotalQuantity"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="26"
+            android:textColor="#e74c3c"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+    <!-- 分隔线 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#f0f0f0" />
+
+</LinearLayout> 

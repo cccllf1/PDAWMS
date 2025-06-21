@@ -95,7 +95,7 @@ class MainActivity : Activity() {
         }
         
         btnLocationModule.setOnClickListener { 
-            Toast.makeText(this, "📍 库位管理功能开发中...", Toast.LENGTH_SHORT).show() 
+            startActivity(Intent(this, LocationActivity::class.java))
         }
         
         // 第三排：扫码功能 + 报表统计

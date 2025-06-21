@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- 库位编码 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="库位编码 *"
+            android:textColor="#333333"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/edtLocationCode"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/edit_text_border"
+            android:hint="请输入库位编码"
+            android:paddingHorizontal="12dp"
+            android:textSize="14sp" />
+
+        <!-- 库位名称 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="库位名称"
+            android:textColor="#333333"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/edtLocationName"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/edit_text_border"
+            android:hint="请输入库位名称（可选）"
+            android:paddingHorizontal="12dp"
+            android:textSize="14sp" />
+
+        <!-- 一级分类 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="一级分类名称"
+            android:textColor="#333333"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/edtCategory1Label"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/edit_text_border"
+            android:hint="如：仓库/区域/楼层等"
+            android:text="仓库"
+            android:paddingHorizontal="12dp"
+            android:textSize="14sp" />
+
+        <EditText
+            android:id="@+id/edtCategory1"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/edit_text_border"
+            android:hint="如：A仓/B区/1楼等"
+            android:paddingHorizontal="12dp"
+            android:textSize="14sp" />
+
+        <!-- 二级分类 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="二级分类名称"
+            android:textColor="#333333"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/edtCategory2Label"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/edit_text_border"
+            android:hint="如：货架/排/区等"
+            android:text="货架"
+            android:paddingHorizontal="12dp"
+            android:textSize="14sp" />
+
+        <EditText
+            android:id="@+id/edtCategory2"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/edit_text_border"
+            android:hint="如：1号货架/2排/东区等"
+            android:paddingHorizontal="12dp"
+            android:textSize="14sp" />
+
+        <!-- 备注描述 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="备注描述"
+            android:textColor="#333333"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/edtDescription"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/edit_text_border"
+            android:gravity="start|top"
+            android:hint="请输入备注描述（可选）"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="8dp"
+            android:textSize="14sp" />
+
+    </LinearLayout>
+
+</ScrollView> 

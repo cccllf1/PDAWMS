@@ -21,6 +21,7 @@ class UnifiedNavBar(
     
     // 导航按钮
     private lateinit var btnNavInventory: Button
+    private lateinit var btnNavLocation: Button
     private lateinit var btnNavInbound: Button
     private lateinit var btnNavOutbound: Button
     private lateinit var btnNavScan: Button
@@ -29,6 +30,7 @@ class UnifiedNavBar(
     // 页面标题映射
     private val pageTitles = mapOf(
         "inventory" to "库存管理",
+        "location" to "货位管理",
         "inbound" to "入库管理", 
         "outbound" to "出库管理",
         "scan" to "扫码录入"
@@ -53,6 +55,7 @@ class UnifiedNavBar(
         // 获取控件引用
         tvNavTitle = navBarView.findViewById(R.id.tvNavTitle)
         btnNavInventory = navBarView.findViewById(R.id.btnNavInventory)
+        btnNavLocation = navBarView.findViewById(R.id.btnNavLocation)
         btnNavInbound = navBarView.findViewById(R.id.btnNavInbound)
         btnNavOutbound = navBarView.findViewById(R.id.btnNavOutbound)
         btnNavScan = navBarView.findViewById(R.id.btnNavScan)
@@ -71,6 +74,7 @@ class UnifiedNavBar(
         // 设置当前页面按钮为选中状态
         when (currentPage) {
             "inventory" -> btnNavInventory.isSelected = true
+            "location" -> btnNavLocation.isSelected = true
             "inbound" -> btnNavInbound.isSelected = true
             "outbound" -> btnNavOutbound.isSelected = true
             "scan" -> btnNavScan.isSelected = true
@@ -82,6 +86,7 @@ class UnifiedNavBar(
      */
     private fun resetAllButtons() {
         btnNavInventory.isSelected = false
+        btnNavLocation.isSelected = false
         btnNavInbound.isSelected = false
         btnNavOutbound.isSelected = false
         btnNavScan.isSelected = false
@@ -91,9 +96,20 @@ class UnifiedNavBar(
      * 设置点击事件监听器
      */
     private fun setupClickListeners() {
+        // 标题点击返回主页
+        tvNavTitle.setOnClickListener {
+            navigateToHomePage()
+        }
+        
         btnNavInventory.setOnClickListener {
             if (currentPage != "inventory") {
                 navigateToPage(InventoryActivity::class.java)
+            }
+        }
+        
+        btnNavLocation.setOnClickListener {
+            if (currentPage != "location") {
+                navigateToPage(LocationActivity::class.java)
             }
         }
         
@@ -123,6 +139,17 @@ class UnifiedNavBar(
         val intent = Intent(activity, targetActivity)
         // 清除当前Activity的回退栈，避免返回时重复跳转
         intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        activity.startActivity(intent)
+        activity.overridePendingTransition(0, 0) // 禁用Activity切换动画
+    }
+    
+    /**
+     * 返回主页
+     */
+    private fun navigateToHomePage() {
+        val intent = Intent(activity, MainActivity::class.java)
+        // 清除所有Activity栈，回到主页
+        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
         activity.startActivity(intent)
         activity.overridePendingTransition(0, 0) // 禁用Activity切换动画
     }

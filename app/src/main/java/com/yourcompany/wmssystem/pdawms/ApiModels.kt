@@ -240,4 +240,64 @@ data class OutboundInventory(
     @SerializedName("sku_size") val sku_size: String,
     @SerializedName("sku_location_quantity") val sku_location_quantity: Int,
     @SerializedName("sku_total_quantity") val sku_total_quantity: Int
+)
+
+// 库位管理相关数据模型
+data class CreateLocationRequest(
+    @SerializedName("location_code") val location_code: String,
+    @SerializedName("location_name") val location_name: String?,
+    @SerializedName("category1Label") val category1Label: String?,
+    @SerializedName("category1") val category1: String?,
+    @SerializedName("category2Label") val category2Label: String?,
+    @SerializedName("category2") val category2: String?,
+    @SerializedName("description") val description: String?,
+    @SerializedName("priority") val priority: Int?
+)
+
+data class UpdateLocationRequest(
+    @SerializedName("location_code") val location_code: String,
+    @SerializedName("location_name") val location_name: String?,
+    @SerializedName("category1Label") val category1Label: String?,
+    @SerializedName("category1") val category1: String?,
+    @SerializedName("category2Label") val category2Label: String?,
+    @SerializedName("category2") val category2: String?,
+    @SerializedName("description") val description: String?,
+    @SerializedName("priority") val priority: Int?
+)
+
+// 库位库存响应 - 匹配实际API结构
+data class LocationInventoryResponse(
+    @SerializedName("items") val items: List<LocationInventoryItem>?,
+    @SerializedName("pagination") val pagination: InventoryPagination?,
+    @SerializedName("summary") val summary: InventorySummary?
+)
+
+// 分页信息
+data class InventoryPagination(
+    @SerializedName("page") val page: Int,
+    @SerializedName("page_size") val page_size: Int,
+    @SerializedName("total_pages") val total_pages: Int,
+    @SerializedName("total_items") val total_items: Int
+)
+
+// 库存汇总信息
+data class InventorySummary(
+    @SerializedName("total_items") val total_items: Int,
+    @SerializedName("total_quantity") val total_quantity: Int
+)
+
+// 库位库存条目 - 匹配实际API结构
+data class LocationInventoryItem(
+    @SerializedName("_id") val _id: String?,
+    @SerializedName("product_code") val product_code: String,
+    @SerializedName("product_name") val product_name: String?,
+    @SerializedName("location_code") val location_code: String?,
+    @SerializedName("product_id") val product_id: String?,
+    @SerializedName("sku_code") val sku_code: String,
+    @SerializedName("sku_color") val sku_color: String?,
+    @SerializedName("sku_size") val sku_size: String?,
+    @SerializedName("stock_quantity") val stock_quantity: Int,
+    @SerializedName("image_path") val image_path: String?,
+    @SerializedName("batch_number") val batch_number: String?,
+    @SerializedName("unit") val unit: String?
 ) 

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 单个SKU格子 - 简洁明了的卡片设计 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="160dp"
+    android:layout_weight="1"
+    android:layout_margin="6dp"
+    android:orientation="vertical"
+    android:background="@drawable/card_background_with_border"
+    android:elevation="8dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?android:attr/selectableItemBackground">
+
+    <!-- 图片区域 -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#f5f5f5">
+
+        <!-- 商品图片 -->
+        <ImageView
+            android:id="@+id/imgProduct"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerInside"
+            android:src="@android:drawable/ic_menu_gallery"
+            android:padding="8dp" />
+
+        <!-- 右上角数量标签 -->
+        <TextView
+            android:id="@+id/txtQuantity"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|end"
+            android:layout_margin="4dp"
+            android:background="@drawable/badge_background_blue"
+            android:text="99"
+            android:textColor="#ffffff"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="4dp"
+            android:minWidth="28dp"
+            android:gravity="center"
+            android:elevation="3dp"
+            android:shadowColor="#000000"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="2" />
+
+    </FrameLayout>
+
+    <!-- 信息区域 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#000000"
+        android:padding="8dp"
+        android:elevation="2dp">
+
+        <!-- SKU编码 -->
+        <TextView
+            android:id="@+id/txtSkuCode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="129092"
+            android:textColor="#ffffff"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:shadowColor="#000000"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="2" />
+
+        <!-- 颜色和尺码 -->
+        <TextView
+            android:id="@+id/txtColorSize"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="黄色-M"
+            android:textColor="#ffffff"
+            android:textSize="12sp"
+            android:gravity="center"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:layout_marginTop="2dp"
+            android:shadowColor="#000000"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="2" />
+
+    </LinearLayout>
+
+    <!-- 隐藏的详细信息字段 (用于兼容现有代码) -->
+    <TextView
+        android:id="@+id/txtSkuInfo"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/txtQuantityInfo"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
+
+</LinearLayout> 

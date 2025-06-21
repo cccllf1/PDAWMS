@@ -69,6 +69,20 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
 
+        <activity
+            android:name="com.yourcompany.wmssystem.pdawms.LocationActivity"
+            android:exported="false"
+            android:label="库位管理"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
+        <activity
+            android:name="com.yourcompany.wmssystem.pdawms.LocationInventoryActivity"
+            android:exported="false"
+            android:label="库位库存"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
     </application>
 
 </manifest> 
