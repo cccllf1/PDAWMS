@@ -608,11 +608,16 @@ class LocationInventoryGridAdapter(
         // 加载商品图片作为背景
         loadProductImage(item, holder.imgProduct)
         
-        // 点击事件 - 显示详细信息
+        // 点击事件 - 显示SKU操作菜单
         holder.itemView.setOnClickListener {
-            Toast.makeText(holder.itemView.context, 
-                "SKU: ${item.sku_code}\n数量: ${item.stock_quantity} ${item.unit ?: "件"}\n商品: ${item.product_name ?: "未知"}", 
-                Toast.LENGTH_LONG).show()
+            try {
+                Log.d("WMS_LOCATION", "📱 点击SKU卡片: ${item.sku_code}")
+                showSkuOperationMenu(holder.itemView.context, item)
+                
+            } catch (e: Exception) {
+                Log.e("WMS_LOCATION", "❌ 显示SKU操作菜单失败: ${e.message}", e)
+                Toast.makeText(holder.itemView.context, "操作失败", Toast.LENGTH_SHORT).show()
+            }
         }
     }
     
@@ -661,13 +666,35 @@ class LocationInventoryGridAdapter(
                 connection.connect()
                 
                 val inputStream = connection.getInputStream()
-                val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+                
+                // 先获取图片尺寸，避免直接加载大图导致OOM
+                val options = android.graphics.BitmapFactory.Options()
+                options.inJustDecodeBounds = true
+                android.graphics.BitmapFactory.decodeStream(inputStream, null, options)
                 inputStream.close()
+                
+                // 重新打开连接获取图片数据
+                val connection2 = url.openConnection()
+                connection2.doInput = true
+                connection2.connect()
+                val inputStream2 = connection2.getInputStream()
+                
+                // 计算合适的缩放比例（目标尺寸：200x200像素）
+                val targetSize = 200
+                val sampleSize = calculateInSampleSize(options, targetSize, targetSize)
+                
+                // 使用缩放比例加载图片
+                val decodeOptions = android.graphics.BitmapFactory.Options()
+                decodeOptions.inSampleSize = sampleSize
+                decodeOptions.inPreferredConfig = android.graphics.Bitmap.Config.RGB_565 // 使用更少内存的格式
+                
+                val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream2, null, decodeOptions)
+                inputStream2.close()
                 
                 if (bitmap != null) {
                     // 在主线程更新UI
                     withContext(Dispatchers.Main) {
-                        Log.d("WMS_LOCATION", "✅ 网络图片加载成功")
+                        Log.d("WMS_LOCATION", "✅ 网络图片加载成功，尺寸: ${bitmap.width}x${bitmap.height}")
                         imageView.setImageBitmap(bitmap)
                     }
                 } else {
@@ -677,6 +704,11 @@ class LocationInventoryGridAdapter(
                     }
                 }
                 
+            } catch (e: OutOfMemoryError) {
+                Log.e("WMS_LOCATION", "❌ 图片加载内存溢出: ${e.message}")
+                withContext(Dispatchers.Main) {
+                    imageView.setImageResource(fallbackImage)
+                }
             } catch (e: Exception) {
                 Log.w("WMS_LOCATION", "❌ 网络图片加载失败: ${e.message}")
                 // 加载失败时在主线程显示占位图
@@ -685,6 +717,23 @@ class LocationInventoryGridAdapter(
                 }
             }
         }
+    }
+    
+    private fun calculateInSampleSize(options: android.graphics.BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+        val height = options.outHeight
+        val width = options.outWidth
+        var inSampleSize = 1
+        
+        if (height > reqHeight || width > reqWidth) {
+            val halfHeight = height / 2
+            val halfWidth = width / 2
+            
+            while ((halfHeight / inSampleSize) >= reqHeight && (halfWidth / inSampleSize) >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+        
+        return inSampleSize
     }
     
 
@@ -753,5 +802,173 @@ class LocationInventoryGridAdapter(
         
         Log.d("WMS_LOCATION", "🖼️ SKU ${skuCode} 最终选择图标: $drawable")
         return drawable
+    }
+    
+    // 显示SKU操作菜单
+    private fun showSkuOperationMenu(context: android.content.Context, item: LocationInventoryItem) {
+        val skuCode = item.sku_code ?: "未知SKU"
+        val quantity = item.stock_quantity ?: 0
+        val unit = item.unit ?: "件"
+        val productName = item.product_name ?: "未知商品"
+        
+        val options = arrayOf(
+            "📦 入库操作",
+            "📤 出库操作", 
+            "📋 盘点操作",
+            "ℹ️ 查看详情"
+        )
+        
+        AlertDialog.Builder(context)
+            .setTitle("SKU操作: $skuCode")
+            .setMessage("当前库存: $quantity $unit\n商品: $productName")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> performInboundOperation(context, item)
+                    1 -> performOutboundOperation(context, item)
+                    2 -> performInventoryOperation(context, item)
+                    3 -> showSkuDetails(context, item)
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+    
+    // 入库操作
+    private fun performInboundOperation(context: android.content.Context, item: LocationInventoryItem) {
+        Log.d("WMS_LOCATION", "🔄 执行入库操作: ${item.sku_code}")
+        
+        val input = EditText(context).apply {
+            hint = "请输入入库数量"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText("1")
+        }
+        
+        AlertDialog.Builder(context)
+            .setTitle("📦 入库操作")
+            .setMessage("SKU: ${item.sku_code}\n当前库存: ${item.stock_quantity} ${item.unit ?: "件"}")
+            .setView(input)
+            .setPositiveButton("确认入库") { _, _ ->
+                val quantity = input.text.toString().toIntOrNull() ?: 0
+                if (quantity > 0) {
+                    executeInboundOperation(context, item, quantity)
+                } else {
+                    Toast.makeText(context, "请输入有效的入库数量", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+    
+    // 出库操作
+    private fun performOutboundOperation(context: android.content.Context, item: LocationInventoryItem) {
+        Log.d("WMS_LOCATION", "🔄 执行出库操作: ${item.sku_code}")
+        
+        val input = EditText(context).apply {
+            hint = "请输入出库数量"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText("1")
+        }
+        
+        AlertDialog.Builder(context)
+            .setTitle("📤 出库操作")
+            .setMessage("SKU: ${item.sku_code}\n当前库存: ${item.stock_quantity} ${item.unit ?: "件"}")
+            .setView(input)
+            .setPositiveButton("确认出库") { _, _ ->
+                val quantity = input.text.toString().toIntOrNull() ?: 0
+                val currentStock = item.stock_quantity ?: 0
+                
+                if (quantity > 0) {
+                    if (quantity <= currentStock) {
+                        executeOutboundOperation(context, item, quantity)
+                    } else {
+                        Toast.makeText(context, "出库数量不能超过当前库存($currentStock)", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(context, "请输入有效的出库数量", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+    
+    // 盘点操作
+    private fun performInventoryOperation(context: android.content.Context, item: LocationInventoryItem) {
+        Log.d("WMS_LOCATION", "🔄 执行盘点操作: ${item.sku_code}")
+        
+        val input = EditText(context).apply {
+            hint = "请输入实际盘点数量"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText("${item.stock_quantity ?: 0}")
+        }
+        
+        AlertDialog.Builder(context)
+            .setTitle("📋 盘点操作")
+            .setMessage("SKU: ${item.sku_code}\n系统库存: ${item.stock_quantity} ${item.unit ?: "件"}")
+            .setView(input)
+            .setPositiveButton("确认盘点") { _, _ ->
+                val actualQuantity = input.text.toString().toIntOrNull()
+                if (actualQuantity != null && actualQuantity >= 0) {
+                    executeInventoryOperation(context, item, actualQuantity)
+                } else {
+                    Toast.makeText(context, "请输入有效的盘点数量", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+    
+    // 查看详情
+    private fun showSkuDetails(context: android.content.Context, item: LocationInventoryItem) {
+        val skuCode = item.sku_code ?: "未知SKU"
+        val quantity = item.stock_quantity ?: 0
+        val unit = item.unit ?: "件"
+        val productName = item.product_name ?: "未知商品"
+        
+        val message = "SKU编码: $skuCode\n商品名称: $productName\n当前库存: $quantity $unit"
+        
+        AlertDialog.Builder(context)
+            .setTitle("ℹ️ SKU详情")
+            .setMessage(message)
+            .setPositiveButton("确定", null)
+            .show()
+    }
+    
+    // 执行入库操作
+    private fun executeInboundOperation(context: android.content.Context, item: LocationInventoryItem, quantity: Int) {
+        // TODO: 调用入库API
+        Log.d("WMS_LOCATION", "✅ 入库操作: SKU=${item.sku_code}, 数量=$quantity")
+        Toast.makeText(context, "入库成功！SKU: ${item.sku_code}, 数量: $quantity", Toast.LENGTH_LONG).show()
+        
+        // 这里可以添加实际的API调用
+        // ApiClient.getApiService().performInbound(...)
+    }
+    
+    // 执行出库操作
+    private fun executeOutboundOperation(context: android.content.Context, item: LocationInventoryItem, quantity: Int) {
+        // TODO: 调用出库API
+        Log.d("WMS_LOCATION", "✅ 出库操作: SKU=${item.sku_code}, 数量=$quantity")
+        Toast.makeText(context, "出库成功！SKU: ${item.sku_code}, 数量: $quantity", Toast.LENGTH_LONG).show()
+        
+        // 这里可以添加实际的API调用
+        // ApiClient.getApiService().performOutbound(...)
+    }
+    
+    // 执行盘点操作
+    private fun executeInventoryOperation(context: android.content.Context, item: LocationInventoryItem, actualQuantity: Int) {
+        val systemQuantity = item.stock_quantity ?: 0
+        val difference = actualQuantity - systemQuantity
+        
+        Log.d("WMS_LOCATION", "✅ 盘点操作: SKU=${item.sku_code}, 系统库存=$systemQuantity, 实际库存=$actualQuantity, 差异=$difference")
+        
+        val message = if (difference == 0) {
+            "盘点完成！库存数量准确无误"
+        } else {
+            "盘点完成！发现差异: ${if (difference > 0) "+" else ""}$difference"
+        }
+        
+        Toast.makeText(context, "$message\nSKU: ${item.sku_code}", Toast.LENGTH_LONG).show()
+        
+        // 这里可以添加实际的API调用
+        // ApiClient.getApiService().performInventoryAdjustment(...)
     }
 } 
