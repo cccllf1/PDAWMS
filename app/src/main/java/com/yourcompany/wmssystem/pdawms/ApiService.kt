@@ -88,12 +88,19 @@ interface ApiService {
     
     // SKU外部条码管理
     @GET("api/sku/{sku_code}/external-codes")
-    suspend fun getSkuExternalCodes(@Path("sku_code") sku_code: String): Response<ApiResponse<List<String>>>
+    suspend fun getSkuExternalCodes(@Path("sku_code") sku_code: String): Response<ApiResponse<List<ExternalCode>>>
     
     @POST("api/sku/{sku_code}/external-codes")
-    suspend fun addSkuExternalCode(
+    suspend fun addExternalCode(
         @Path("sku_code") sku_code: String,
-        @Body externalCode: Map<String, String>
+        @Body request: Map<String, String>
+    ): Response<ApiResponse<Any>>
+    
+    @HTTP(method = "DELETE", path = "api/sku/{sku_code}/external-codes/{external_code}", hasBody = true)
+    suspend fun deleteExternalCode(
+        @Path("sku_code") sku_code: String,
+        @Path("external_code") external_code: String,
+        @Body request: Map<String, String>
     ): Response<ApiResponse<Any>>
     
     @GET("api/sku/external/{external_code}")

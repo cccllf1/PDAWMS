@@ -12,98 +12,106 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal" />
 
-    <!-- 主要内容区域 -->
+    <!-- 紧凑的搜索区域 -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="#FFFFFF"
+        android:padding="8dp"
+        android:elevation="2dp">
 
-        <!-- 状态标题 -->
-        <TextView
-            android:id="@+id/txtStatus"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🔍 商品/SKU搜索与外部条码管理"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="#1976D2"
-            android:gravity="center"
-            android:padding="12dp"
-            android:background="@drawable/card_background_with_border"
-            android:layout_marginBottom="16dp" />
-
-        <!-- 搜索输入区域 -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:background="@drawable/card_background_with_border"
-            android:padding="16dp"
-            android:layout_marginBottom="16dp">
-
-            <EditText
-                android:id="@+id/editSearch"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="扫描或输入商品代码/SKU/外部条码"
-                android:textSize="16sp"
-                android:padding="12dp"
-                android:background="@drawable/edit_text_border"
-                android:layout_marginEnd="8dp"
-                android:imeOptions="actionSearch"
-                android:inputType="text" />
-
-            <Button
-                android:id="@+id/btnSearch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="搜索"
-                android:textColor="#FFFFFF"
-                android:background="@drawable/nav_button_selector"
-                android:padding="12dp"
-                android:layout_marginEnd="8dp" />
-
-            <Button
-                android:id="@+id/btnClear"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="清空"
-                android:textColor="#666666"
-                android:background="@drawable/card_background_with_border"
-                android:padding="12dp" />
-
-        </LinearLayout>
-
-        <!-- 搜索结果显示 -->
-        <TextView
-            android:id="@+id/txtResult"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="请扫描或输入商品代码、SKU或外部条码进行搜索"
+        <EditText
+            android:id="@+id/editSearch"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:hint="搜索商品/SKU/条码"
             android:textSize="14sp"
+            android:padding="8dp"
+            android:background="@drawable/edit_text_border"
+            android:layout_marginEnd="8dp"
+            android:imeOptions="actionSearch"
+            android:inputType="text" />
+
+        <Button
+            android:id="@+id/btnSearch"
+            android:layout_width="60dp"
+            android:layout_height="40dp"
+            android:text="搜索"
+            android:textSize="12sp"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/nav_button_selector" />
+
+        <Button
+            android:id="@+id/btnClear"
+            android:layout_width="60dp"
+            android:layout_height="40dp"
+            android:text="清空"
+            android:textSize="12sp"
             android:textColor="#666666"
-            android:padding="12dp"
             android:background="@drawable/card_background_with_border"
-            android:layout_marginBottom="16dp"
-            android:gravity="center" />
+            android:layout_marginStart="4dp" />
 
-        <!-- 加载指示器 -->
-        <ProgressBar
-            android:id="@+id/progressBar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
+    </LinearLayout>
+
+    <!-- 状态信息（紧凑显示） -->
+    <TextView
+        android:id="@+id/txtStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="🔍 商品/SKU搜索与外部条码管理"
+        android:textSize="12sp"
+        android:textColor="#1976D2"
+        android:gravity="center"
+        android:padding="4dp"
+        android:background="#E3F2FD" />
+
+    <!-- 搜索结果提示（紧凑显示） -->
+    <TextView
+        android:id="@+id/txtResult"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="请扫描或输入进行搜索"
+        android:textSize="12sp"
+        android:textColor="#666666"
+        android:padding="6dp"
+        android:background="#FFFFFF"
+        android:gravity="center"
+        android:visibility="visible" />
+
+    <!-- 加载指示器 -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_gravity="center"
+        android:visibility="gone"
+        android:layout_margin="4dp" />
+
+    <!-- 内容区域（占用剩余全部空间） -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#F5F5F5">
+
+        <!-- 商品层级列表 -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerProductCards"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:visibility="gone"
-            android:layout_marginBottom="16dp" />
+            android:padding="4dp"
+            android:clipToPadding="false" />
 
-        <!-- 搜索结果列表 -->
+        <!-- 传统搜索结果（备用） -->
         <ScrollView
             android:id="@+id/scrollViewResults"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:fillViewport="true">
+            android:fillViewport="true"
+            android:visibility="gone">
 
             <LinearLayout
                 android:id="@+id/layoutResults"
@@ -114,6 +122,6 @@
 
         </ScrollView>
 
-    </LinearLayout>
+    </FrameLayout>
 
 </LinearLayout> 

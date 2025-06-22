@@ -63,6 +63,11 @@ data class Product(
     @SerializedName("updated_at") val updated_at: String?
 )
 
+// 外部条码信息
+data class ExternalCode(
+    @SerializedName("external_code") val external_code: String
+)
+
 // SKU信息 - 更新为新的API结构
 data class SkuInfo(
     @SerializedName("sku_code") val sku_code: String,
@@ -72,7 +77,7 @@ data class SkuInfo(
     @SerializedName("stock_quantity") val stock_quantity: Int?,
     @SerializedName("sku_total_quantity") val sku_total_quantity: Int?,  // 更新字段名
     @SerializedName("locations") val locations: List<LocationStock>?,
-    @SerializedName("external_codes") val external_codes: List<String>?
+    @SerializedName("external_codes") val external_codes: List<ExternalCode>?
 )
 
 // 颜色信息 - 更新为新的API结构

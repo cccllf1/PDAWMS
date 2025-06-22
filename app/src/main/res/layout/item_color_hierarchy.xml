@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    android:layout_marginStart="24dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="#F5F5F5">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp">
+
+        <!-- 颜色图片 -->
+        <ImageView
+            android:id="@+id/imgColor"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_marginEnd="12dp"
+            android:scaleType="centerCrop"
+            android:background="@drawable/card_background_with_border" />
+
+        <!-- 颜色信息 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <!-- 颜色名称 -->
+            <TextView
+                android:id="@+id/txtColorName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="颜色名称"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/black" />
+
+            <!-- 颜色库存 -->
+            <TextView
+                android:id="@+id/txtColorStock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="库存: 0件"
+                android:textSize="12sp"
+                android:textColor="@android:color/darker_gray"
+                android:layout_marginTop="4dp" />
+
+            <!-- SKU数量 -->
+            <TextView
+                android:id="@+id/txtSkuCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SKU: 0个"
+                android:textSize="12sp"
+                android:textColor="@android:color/darker_gray"
+                android:layout_marginTop="4dp" />
+
+        </LinearLayout>
+
+        <!-- 展开图标 -->
+        <ImageView
+            android:id="@+id/expandIcon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="center_vertical"
+            android:src="@drawable/ic_launcher_foreground"
+            android:layout_marginStart="8dp" />
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView> 
