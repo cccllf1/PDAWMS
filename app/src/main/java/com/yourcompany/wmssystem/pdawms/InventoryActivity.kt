@@ -140,8 +140,19 @@ class InventoryActivity : AppCompatActivity() {
     }
     
     private fun onProductClick(product: Product) {
-        val dialogFragment = ProductDetailsDialogFragment.newInstance(product)
-        dialogFragment.show(supportFragmentManager, "ProductDetailsDialog")
+        // 检查Activity状态，避免在onSaveInstanceState后显示对话框
+        if (isFinishing || isDestroyed) {
+            Log.w("InventoryActivity", "Activity正在结束或已销毁，跳过显示对话框")
+            return
+        }
+        
+        try {
+            val dialogFragment = ProductDetailsDialogFragment.newInstance(product)
+            dialogFragment.showNow(supportFragmentManager, "ProductDetailsDialog")
+        } catch (e: Exception) {
+            Log.e("InventoryActivity", "显示产品详情对话框失败: ${e.message}", e)
+            Toast.makeText(this, "无法显示产品详情", Toast.LENGTH_SHORT).show()
+        }
     }
     
     private fun loadInitialInventory() {
@@ -177,8 +188,9 @@ class InventoryAdapter(
         val txtProductCode: TextView = view.findViewById(R.id.txtProductCode)
         val txtProductTotalStock: TextView = view.findViewById(R.id.txtProductTotalStock)
         val txtProductStats: TextView = view.findViewById(R.id.txtProductStats)
-        val recyclerSkuImages: RecyclerView = view.findViewById(R.id.recyclerSkuImages)
-        val txtNoSku: TextView = view.findViewById(R.id.txtNoSku)
+        val imgProductMain: ImageView = view.findViewById(R.id.imgProductMain)
+        val txtColorStock: TextView = view.findViewById(R.id.txtColorStock)
+        val txtNoImage: TextView = view.findViewById(R.id.txtNoImage)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -202,18 +214,47 @@ class InventoryAdapter(
             product.total_location_count ?: 0
         )
 
-        val colorsWithImages = product.colors
+        // 找到库存最多的颜色（有图片的）
+        val topColorWithImage = product.colors
             ?.filter { !it.image_path.isNullOrEmpty() }
-            ?.sortedByDescending { it.color_total_quantity ?: 0 } ?: emptyList()
+            ?.maxByOrNull { it.color_total_quantity ?: 0 }
 
-        if (colorsWithImages.isNotEmpty()) {
-            holder.recyclerSkuImages.visibility = View.VISIBLE
-            holder.txtNoSku.visibility = View.GONE
-            holder.recyclerSkuImages.layoutManager = LinearLayoutManager(holder.itemView.context, LinearLayoutManager.HORIZONTAL, false)
-            holder.recyclerSkuImages.adapter = ColorImageAdapter(colorsWithImages)
+        if (topColorWithImage != null) {
+            // 显示库存最多的颜色图片
+            holder.imgProductMain.visibility = View.VISIBLE
+            holder.txtColorStock.visibility = View.VISIBLE
+            holder.txtNoImage.visibility = View.GONE
+            
+            // 设置库存数量标签
+            holder.txtColorStock.text = (topColorWithImage.color_total_quantity ?: 0).toString()
+            
+            // 安全的图片加载
+            val imageUrl = ApiClient.processImageUrl(topColorWithImage.image_path, context)
+            if (isValidImageUrl(imageUrl)) {
+                try {
+                    Log.d("InventoryAdapter", "加载主图片: $imageUrl")
+                    Glide.with(context)
+                        .load(imageUrl)
+                        .placeholder(android.R.drawable.ic_menu_gallery)
+                        .error(android.R.drawable.ic_menu_gallery)
+                        .thumbnail(0.1f)
+                        .override(300, 300)
+                        .centerCrop()
+                        .into(holder.imgProductMain)
+                } catch (e: Exception) {
+                    Log.e("InventoryAdapter", "Glide加载主图片失败: ${e.message}", e)
+                    holder.imgProductMain.setImageResource(android.R.drawable.ic_menu_gallery)
+                }
+            } else {
+                Log.w("InventoryAdapter", "无效的主图片URL，使用占位图: $imageUrl")
+                holder.imgProductMain.setImageResource(android.R.drawable.ic_menu_gallery)
+            }
         } else {
-            holder.recyclerSkuImages.visibility = View.GONE
-            holder.txtNoSku.visibility = View.VISIBLE
+            // 没有图片时显示占位图
+            holder.imgProductMain.visibility = View.VISIBLE
+            holder.txtColorStock.visibility = View.GONE
+            holder.txtNoImage.visibility = View.VISIBLE
+            holder.imgProductMain.setImageResource(android.R.drawable.ic_menu_gallery)
         }
     }
 
@@ -224,37 +265,13 @@ class InventoryAdapter(
         productList.addAll(newProducts)
         notifyDataSetChanged()
     }
+    
+    private fun isValidImageUrl(url: String?): Boolean {
+        if (url.isNullOrEmpty()) return false
+        if (!url.startsWith("http://") && !url.startsWith("https://")) return false
+        if (url.contains(" ")) return false // URL不应包含空格
+        return true
+    }
 }
 
-class ColorImageAdapter(
-    private var items: List<ColorInfo>
-) : RecyclerView.Adapter<ColorImageAdapter.ViewHolder>() {
-
-    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val imgColor: ImageView = view.findViewById(R.id.imgSku)
-        val txtColorStock: TextView = view.findViewById(R.id.txtSkuStock)
-    }
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_inventory_sku_image, parent, false)
-        return ViewHolder(view)
-    }
-
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val item = items[position]
-        holder.txtColorStock.text = (item.color_total_quantity ?: 0).toString()
-
-        val imageUrl = ApiClient.processImageUrl(item.image_path, holder.itemView.context)
-        Glide.with(holder.itemView.context)
-            .load(imageUrl)
-            .placeholder(android.R.drawable.ic_menu_gallery)
-            .error(android.R.drawable.ic_menu_gallery)
-            .thumbnail(0.1f)
-            .override(200,200)
-            .centerCrop()
-            .into(holder.imgColor)
-    }
-
-    override fun getItemCount(): Int = items.size
-} 
+ 

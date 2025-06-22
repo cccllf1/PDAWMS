@@ -15,16 +15,17 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="16dp"
+        android:padding="12dp"
         android:gravity="center_vertical"
         android:baselineAligned="false">
 
         <!-- Left side: Text Information -->
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:orientation="vertical"
-            android:layout_marginEnd="16dp">
+            android:layout_marginEnd="12dp">
 
             <TextView
                 android:id="@+id/txtProductName"
@@ -75,29 +76,43 @@
 
         </LinearLayout>
 
-        <!-- Right side: Image List -->
+        <!-- Right side: Single Product Image -->
         <FrameLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1">
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_gravity="center_vertical|end">
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recyclerSkuImages"
+            <ImageView
+                android:id="@+id/imgProductMain"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:orientation="horizontal"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-                tools:itemCount="3"
-                tools:listitem="@layout/item_inventory_sku_image" />
+                android:scaleType="centerCrop"
+                android:contentDescription="商品图片" />
 
             <TextView
-                android:id="@+id/txtNoSku"
+                android:id="@+id/txtColorStock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|end"
+                android:layout_margin="2dp"
+                android:background="@drawable/badge_background_blue"
+                android:paddingStart="4dp"
+                android:paddingTop="1dp"
+                android:paddingEnd="4dp"
+                android:paddingBottom="1dp"
+                android:textColor="@android:color/white"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                tools:text="1200" />
+
+            <TextView
+                android:id="@+id/txtNoImage"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:background="@drawable/edit_text_border"
                 android:gravity="center"
-                android:text="无在库SKU或无图"
-                android:textSize="18sp"
+                android:text="无图"
+                android:textSize="12sp"
+                android:textColor="@android:color/darker_gray"
                 android:visibility="gone" />
         </FrameLayout>
 

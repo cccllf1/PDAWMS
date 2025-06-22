@@ -330,12 +330,27 @@ class ProductColorAdapter(
             val totalQty = color.color_total_quantity ?: 0
             binding.txtColorStock.text = "总库存: ${totalQty}"
 
-            // load image
+            // 安全的图片加载，防止Native崩溃
             val url = ApiClient.processImageUrl(color.image_path, context)
-            Glide.with(context)
-                .load(url)
-                .placeholder(R.drawable.ic_launcher_background)
-                .into(binding.imgColor)
+            
+            if (isValidImageUrl(url)) {
+                try {
+                    Glide.with(context)
+                        .load(url)
+                        .placeholder(R.drawable.ic_launcher_background)
+                        .error(R.drawable.ic_launcher_background)
+                        .thumbnail(0.1f)
+                        .override(400, 400)
+                        .centerCrop()
+                        .into(binding.imgColor)
+                } catch (e: Exception) {
+                    android.util.Log.e("ProductColorAdapter", "Glide加载图片失败: ${e.message}", e)
+                    binding.imgColor.setImageResource(R.drawable.ic_launcher_background)
+                }
+            } else {
+                android.util.Log.w("ProductColorAdapter", "无效的图片URL，使用占位图: $url")
+                binding.imgColor.setImageResource(R.drawable.ic_launcher_background)
+            }
             
             val skuAdapter = SkuDetailAdapter(context, viewModel, actionCallback)
             binding.recyclerSkuDetails.apply {
@@ -352,6 +367,13 @@ class ProductColorAdapter(
             val idx = order.indexOf(size.trim().uppercase())
             return if (idx >= 0) idx else order.size + size.hashCode()
         }
+    }
+    
+    private fun isValidImageUrl(url: String?): Boolean {
+        if (url.isNullOrEmpty()) return false
+        if (!url.startsWith("http://") && !url.startsWith("https://")) return false
+        if (url.contains(" ")) return false // URL不应包含空格
+        return true
     }
 }
 

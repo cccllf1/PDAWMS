@@ -128,9 +128,20 @@ object ApiClient {
 
     fun processImageUrl(path: String?, context: Context): String {
         if (path.isNullOrEmpty()) return ""
-        return if (path.startsWith("http")) path else {
-            val serverUrl = getServerUrl(context)
-            serverUrl.trimEnd('/') + "/" + path.trimStart('/')
+        
+        // 如果已经是完整URL，直接返回
+        if (path.startsWith("http")) return path
+        
+        // 获取服务器地址
+        val serverUrl = getServerUrl(context)
+        if (serverUrl.isEmpty()) {
+            android.util.Log.w("ApiClient", "服务器地址为空，无法处理图片路径: $path")
+            return ""
         }
+        
+        // 构建完整URL
+        val fullUrl = serverUrl.trimEnd('/') + "/" + path.trimStart('/')
+        android.util.Log.d("ApiClient", "图片URL处理: $path -> $fullUrl")
+        return fullUrl
     }
 } 

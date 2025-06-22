@@ -90,17 +90,28 @@ class OutboundListAdapter(
         val stockLocationCount = item.locationStocks.filter { it.value > 0 }.size
         holder.txtSkuMaxStock.text = "库存：${totalAvailableStock}件\n货位：${stockLocationCount}个"
         
-        // 设置图片
+        // 设置图片 - 安全的Glide加载
         if (item.imageUrl.isNotEmpty()) {
             val processedImageUrl = processImageUrl(item.imageUrl, holder.itemView.context)
-            Glide.with(holder.itemView.context)
-                .load(processedImageUrl)
-                .placeholder(android.R.drawable.ic_menu_gallery)
-                .error(android.R.drawable.ic_menu_gallery)
-                .thumbnail(0.1f)
-                .override(200,200)
-                .centerCrop()
-                .into(holder.imgProduct)
+            if (isValidImageUrl(processedImageUrl)) {
+                try {
+                    Log.d("OutboundAdapter", "加载图片: $processedImageUrl")
+                    Glide.with(holder.itemView.context)
+                        .load(processedImageUrl)
+                        .placeholder(android.R.drawable.ic_menu_gallery)
+                        .error(android.R.drawable.ic_menu_gallery)
+                        .thumbnail(0.1f)
+                        .override(200, 200)
+                        .centerCrop()
+                        .into(holder.imgProduct)
+                } catch (e: Exception) {
+                    Log.e("OutboundAdapter", "Glide加载图片失败: ${e.message}", e)
+                    holder.imgProduct.setImageResource(android.R.drawable.ic_menu_gallery)
+                }
+            } else {
+                Log.w("OutboundAdapter", "无效的图片URL，使用占位图: $processedImageUrl")
+                holder.imgProduct.setImageResource(android.R.drawable.ic_menu_gallery)
+            }
         } else {
             holder.imgProduct.setImageResource(android.R.drawable.ic_menu_gallery)
         }
@@ -225,18 +236,31 @@ class OutboundListAdapter(
                             val selectedColor = item.allColors[pos]
                             items[holder.adapterPosition].selectedColorIndex = pos
                             
-                            // 更新图片
+                            // 更新图片 - 安全的Glide加载
                             if (selectedColor.imagePath.isNotEmpty()) {
                                 val processedImageUrl = processImageUrl(selectedColor.imagePath, holder.itemView.context)
-                                Glide.with(holder.itemView.context)
-                                    .load(processedImageUrl)
-                                    .placeholder(android.R.drawable.ic_menu_gallery)
-                                    .error(android.R.drawable.ic_menu_gallery)
-                                    .thumbnail(0.1f)
-                                    .override(200,200)
-                                    .centerCrop()
-                                    .into(holder.imgProduct)
-                                items[holder.adapterPosition].imageUrl = selectedColor.imagePath
+                                if (isValidImageUrl(processedImageUrl)) {
+                                    try {
+                                        Log.d("OutboundAdapter", "更新颜色图片: $processedImageUrl")
+                                        Glide.with(holder.itemView.context)
+                                            .load(processedImageUrl)
+                                            .placeholder(android.R.drawable.ic_menu_gallery)
+                                            .error(android.R.drawable.ic_menu_gallery)
+                                            .thumbnail(0.1f)
+                                            .override(200, 200)
+                                            .centerCrop()
+                                            .into(holder.imgProduct)
+                                        items[holder.adapterPosition].imageUrl = selectedColor.imagePath
+                                    } catch (e: Exception) {
+                                        Log.e("OutboundAdapter", "Glide加载颜色图片失败: ${e.message}", e)
+                                        holder.imgProduct.setImageResource(android.R.drawable.ic_menu_gallery)
+                                    }
+                                } else {
+                                    Log.w("OutboundAdapter", "无效的颜色图片URL，使用占位图: $processedImageUrl")
+                                    holder.imgProduct.setImageResource(android.R.drawable.ic_menu_gallery)
+                                }
+                            } else {
+                                holder.imgProduct.setImageResource(android.R.drawable.ic_menu_gallery)
                             }
                             
                             // 更新尺码选择器
@@ -380,6 +404,13 @@ class OutboundListAdapter(
         } else {
             ""
         }
+    }
+    
+    private fun isValidImageUrl(url: String?): Boolean {
+        if (url.isNullOrEmpty()) return false
+        if (!url.startsWith("http://") && !url.startsWith("https://")) return false
+        if (url.contains(" ")) return false // URL不应包含空格
+        return true
     }
 }
 

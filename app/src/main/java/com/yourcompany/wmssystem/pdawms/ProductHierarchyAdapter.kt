@@ -1,6 +1,7 @@
 package com.yourcompany.wmssystem.pdawms
 
 import android.content.Context
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -250,22 +251,49 @@ class ProductHierarchyAdapter(
     private fun showExternalCodeManagementDialog(sku: SkuInfo, productCode: String, color: String) {
         val activity = context as? androidx.fragment.app.FragmentActivity ?: return
         
-        val dialog = ExternalCodesDialogFragment.newInstance(sku, productCode, color)
-        dialog.show(activity.supportFragmentManager, "ExternalCodesDialog")
+        // 检查Activity状态，避免在onSaveInstanceState后显示对话框
+        if (activity.isFinishing || activity.isDestroyed) {
+            Log.w("ProductHierarchyAdapter", "Activity正在结束或已销毁，跳过显示对话框")
+            return
+        }
+        
+        try {
+            val dialog = ExternalCodesDialogFragment.newInstance(sku, productCode, color)
+            dialog.showNow(activity.supportFragmentManager, "ExternalCodesDialog")
+        } catch (e: Exception) {
+            Log.e("ProductHierarchyAdapter", "显示外部条码对话框失败: ${e.message}", e)
+            // 这里无法显示Toast，因为在Adapter中，只能记录日志
+        }
     }
 
     private fun loadImage(imageView: ImageView, imagePath: String?) {
         val imageUrl = getImageUrl(imagePath)
-        if (imageUrl.isNotEmpty()) {
-            Glide.with(context)
-                .load(imageUrl)
-                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                .placeholder(R.drawable.ic_launcher_foreground)
-                .error(R.drawable.ic_launcher_foreground)
-                .into(imageView)
+        
+        // 严格的URL验证，防止Native崩溃
+        if (isValidImageUrl(imageUrl)) {
+            try {
+                Log.d("ProductHierarchyAdapter", "加载图片: $imageUrl")
+                Glide.with(context)
+                    .load(imageUrl)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .placeholder(R.drawable.ic_launcher_foreground)
+                    .error(R.drawable.ic_launcher_foreground)
+                    .into(imageView)
+            } catch (e: Exception) {
+                Log.e("ProductHierarchyAdapter", "Glide加载图片失败: ${e.message}", e)
+                imageView.setImageResource(R.drawable.ic_launcher_foreground)
+            }
         } else {
+            Log.w("ProductHierarchyAdapter", "无效的图片URL，使用占位图: $imageUrl")
             imageView.setImageResource(R.drawable.ic_launcher_foreground)
         }
+    }
+    
+    private fun isValidImageUrl(url: String?): Boolean {
+        if (url.isNullOrEmpty()) return false
+        if (!url.startsWith("http://") && !url.startsWith("https://")) return false
+        if (url.contains(" ")) return false // URL不应包含空格
+        return true
     }
 
     private fun getImageUrl(imagePath: String?): String {

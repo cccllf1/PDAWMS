@@ -225,19 +225,36 @@ class ScanActivity : AppCompatActivity() {
     }
     
     private fun showExternalCodeManagementDialog(sku: MatchedSku, productCode: String, color: String) {
-        // 将MatchedSku转换为SkuInfo类型
-        val skuInfo = SkuInfo(
-            sku_code = sku.sku_code,
-            sku_color = sku.sku_color,
-            sku_size = sku.sku_size,
-            image_path = sku.image_path,
-            stock_quantity = sku.stock_quantity,
-            sku_total_quantity = sku.sku_total_quantity,
-            locations = sku.locations,
-            external_codes = sku.external_codes
-        )
-        val dialog = ExternalCodesDialogFragment.newInstance(skuInfo, productCode, color)
-        dialog.show(supportFragmentManager, "ExternalCodesDialog")
+        // 检查Activity状态，避免在onSaveInstanceState后显示对话框
+        if (isFinishing || isDestroyed) {
+            Log.w("ScanActivity", "Activity正在结束或已销毁，跳过显示对话框")
+            return
+        }
+        
+        try {
+            // 将MatchedSku转换为SkuInfo类型
+            val skuInfo = SkuInfo(
+                sku_code = sku.sku_code,
+                sku_color = sku.sku_color,
+                sku_size = sku.sku_size,
+                image_path = sku.image_path,
+                stock_quantity = sku.stock_quantity,
+                sku_total_quantity = sku.sku_total_quantity,
+                locations = sku.locations,
+                external_codes = sku.external_codes
+            )
+            val dialog = ExternalCodesDialogFragment.newInstance(skuInfo, productCode, color)
+            
+            // 使用commitAllowingStateLoss避免状态丢失异常
+            dialog.showNow(supportFragmentManager, "ExternalCodesDialog")
+        } catch (e: Exception) {
+            Log.e("ScanActivity", "显示外部条码对话框失败: ${e.message}", e)
+            // 如果对话框显示失败，至少显示一个提示
+            runOnUiThread {
+                txtResult.text = "⚠️ 找到SKU: ${sku.sku_code}，但无法显示详细信息"
+                txtResult.setTextColor(Color.parseColor("#FF9800"))
+            }
+        }
     }
     
     private fun addLocationInfo(locations: List<LocationStock>) {
