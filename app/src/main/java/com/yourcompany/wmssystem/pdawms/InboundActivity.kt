@@ -487,7 +487,7 @@ class InboundListAdapter(
         Log.d("InboundAdapter", "  颜色-尺码-SKU映射: $colorSizeSkuMap")
     }
     
-    // 获取最佳图片URL - 优先级：颜色图片 > 商品图片
+    // 🖼️ 获取最佳图片URL - 优先级：颜色图片 > 商品图片
     private fun getBestImageUrl(product: Product, skuCode: String, color: String, context: Context): String {
         Log.d("InboundActivity", "🖼️ 查找图片 (仅限颜色): 颜色=$color")
         
@@ -557,9 +557,18 @@ class InboundActivity : AppCompatActivity() {
     private var lastScanTime = 0L
     private var lastScanCode = ""
 
+    // 添加Activity焦点状态标记
+    private var isActivityFocused = false
+
     // 扫码广播接收器
     private val scanReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+            // 只有当前Activity有焦点时才处理扫码
+            if (!isActivityFocused) {
+                Log.d("WMS_INBOUND", "🚫 InboundActivity无焦点，忽略扫码: ${intent?.action}")
+                return
+            }
+            
             val scanData = when (intent?.action) {
                 "android.intent.action.SCANRESULT" -> intent.getStringExtra("value")
                 "android.intent.ACTION_DECODE_DATA" -> intent.getStringExtra("barcode_string")
@@ -570,7 +579,10 @@ class InboundActivity : AppCompatActivity() {
                 else -> null
             }
             
-            scanData?.let { insertToFocusedEditText(it) }
+            scanData?.let { 
+                Log.d("WMS_INBOUND", "📱 InboundActivity处理扫码: $it (Action: ${intent?.action})")
+                insertToFocusedEditText(it) 
+            }
         }
     }
 
@@ -706,12 +718,17 @@ class InboundActivity : AppCompatActivity() {
             when (focusedView) {
                 editProductCode -> {
                     editProductCode.setText(data)
+                    editProductCode.setSelection(data.length) // 光标移到末尾
+                    Log.d("WMS_SCAN", "📦 扫码输入到商品编码框: $data")
                     // 扫码后自动添加到列表
                     addProductToList()
                 }
                 else -> {
-                    // 如果焦点在其他地方，默认填入商品码输入框
+                    // 如果焦点在其他地方，默认填入商品码输入框并强制焦点
+                    editProductCode.requestFocus()
                     editProductCode.setText(data)
+                    editProductCode.setSelection(data.length) // 光标移到末尾
+                    Log.d("WMS_SCAN", "📦 扫码输入到默认商品编码框: $data")
                     addProductToList()
                 }
             }
@@ -1152,13 +1169,60 @@ class InboundActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        try {
-            unregisterReceiver(scanReceiver)
-        } catch (e: Exception) {
-            // 忽略异常
-        }
+        // 移除重复的unregisterReceiver调用，因为已经在onPause中处理了
+        Log.d("WMS_INBOUND", "📤 InboundActivity销毁")
     }
 
+    override fun onResume() {
+        super.onResume()
+        isActivityFocused = true
+        
+        // 重新注册扫码接收器，防止Activity重建后接收器丢失
+        try {
+            setupScanReceiver()
+            Log.d("WMS_INBOUND", "✅ InboundActivity恢复，重新注册扫码接收器")
+        } catch (e: Exception) {
+            Log.e("WMS_INBOUND", "重新注册扫码接收器失败: ${e.message}")
+        }
+        
+        // 确保商品输入框获得焦点
+        editProductCode.post {
+            editProductCode.requestFocus()
+        }
+        
+        Log.d("WMS_INBOUND", "✅ InboundActivity获得焦点")
+    }
+
+    override fun onPause() {
+        super.onPause()
+        isActivityFocused = false
+        
+        // 在onPause中注销接收器，防止内存泄露
+        try {
+            unregisterReceiver(scanReceiver)
+            Log.d("WMS_INBOUND", "🔄 InboundActivity暂停，注销扫码接收器")
+        } catch (e: Exception) {
+            Log.e("WMS_INBOUND", "注销扫码接收器失败: ${e.message}")
+        }
+        
+        Log.d("WMS_INBOUND", "🔄 InboundActivity失去焦点")
+    }
+    
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        isActivityFocused = hasFocus
+        
+        if (hasFocus) {
+            // 当窗口获得焦点时，确保输入框有焦点
+            editProductCode.post {
+                editProductCode.requestFocus()
+            }
+            Log.d("WMS_INBOUND", "🎯 InboundActivity窗口获得焦点")
+        } else {
+            Log.d("WMS_INBOUND", "😴 InboundActivity窗口失去焦点")
+        }
+    }
+    
     // 🖼️ 获取最佳图片URL - 优先级：颜色图片 > 商品图片
     private fun getBestImageUrl(product: Product, skuCode: String, color: String, context: Context): String {
         Log.d("InboundActivity", "🖼️ 查找图片 (仅限颜色): 颜色=$color")

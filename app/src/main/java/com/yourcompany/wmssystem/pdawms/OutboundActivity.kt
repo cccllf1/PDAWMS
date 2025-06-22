@@ -396,8 +396,17 @@ class OutboundActivity : AppCompatActivity() {
     private val outboundItems = mutableListOf<OutboundItem>()
     private val locationOptions = mutableListOf<String>()
     
+    // 添加Activity焦点状态标记
+    private var isActivityFocused = false
+    
     private val scanReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+            // 只有当前Activity有焦点时才处理扫码
+            if (!isActivityFocused) {
+                Log.d("WMS_OUTBOUND", "🚫 OutboundActivity无焦点，忽略扫码: ${intent?.action}")
+                return
+            }
+            
             val scanData = when (intent?.action) {
                 "android.intent.action.SCANRESULT" -> intent.getStringExtra("value")
                 "android.intent.ACTION_DECODE_DATA" -> intent.getStringExtra("barcode_string")
@@ -408,7 +417,10 @@ class OutboundActivity : AppCompatActivity() {
                 else -> null
             }
             
-            scanData?.let { insertToFocusedEditText(it) }
+            scanData?.let { 
+                Log.d("WMS_OUTBOUND", "📱 OutboundActivity处理扫码: $it (Action: ${intent?.action})")
+                insertToFocusedEditText(it) 
+            }
         }
     }
     
@@ -430,18 +442,45 @@ class OutboundActivity : AppCompatActivity() {
     
     override fun onResume() {
         super.onResume()
+        isActivityFocused = true
         Log.d("WMS_OUTBOUND", "📤 出库页面恢复，注册扫码接收器")
         // 注册扫码广播接收器
-        setupScanReceiver()
+        try {
+            setupScanReceiver()
+            Log.d("WMS_OUTBOUND", "✅ OutboundActivity恢复，重新注册扫码接收器")
+        } catch (e: Exception) {
+            Log.e("WMS_OUTBOUND", "重新注册扫码接收器失败: ${e.message}")
+        }
+        
+        // 确保商品输入框获得焦点
+        editProductCode.post {
+            editProductCode.requestFocus()
+        }
     }
     
     override fun onPause() {
         super.onPause()
+        isActivityFocused = false
         Log.d("WMS_OUTBOUND", "📤 出库页面暂停，注销扫码接收器")
         try {
             unregisterReceiver(scanReceiver)
         } catch (e: Exception) {
             Log.e("WMS_OUTBOUND", "注销扫码接收器失败: ${e.message}")
+        }
+    }
+    
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        isActivityFocused = hasFocus
+        
+        if (hasFocus) {
+            // 当窗口获得焦点时，确保输入框有焦点
+            editProductCode.post {
+                editProductCode.requestFocus()
+            }
+            Log.d("WMS_OUTBOUND", "🎯 OutboundActivity窗口获得焦点")
+        } else {
+            Log.d("WMS_OUTBOUND", "😴 OutboundActivity窗口失去焦点")
         }
     }
     
@@ -485,17 +524,21 @@ class OutboundActivity : AppCompatActivity() {
             when (focusedView) {
                 editProductCode -> {
                     editProductCode.setText(data)
+                    editProductCode.setSelection(data.length) // 光标移到末尾
                     Log.d("WMS_SCAN", "📦 扫码输入到商品编码框: $data")
                     // 扫码后自动执行查询，但不清空输入框
                     smartQueryProduct(data, keepInput = true)
                 }
                 editQuantityInput -> {
                     editQuantityInput.setText(data)
+                    editQuantityInput.setSelection(data.length) // 光标移到末尾
                     Log.d("WMS_SCAN", "📦 扫码输入到数量框: $data")
                 }
                 else -> {
-                    // 如果焦点在其他地方，默认填入商品码输入框
+                    // 如果焦点在其他地方，默认填入商品码输入框并强制焦点
+                    editProductCode.requestFocus()
                     editProductCode.setText(data)
+                    editProductCode.setSelection(data.length) // 光标移到末尾
                     Log.d("WMS_SCAN", "📦 扫码输入到默认商品编码框: $data")
                     // 扫码后自动执行查询，但不清空输入框
                     smartQueryProduct(data, keepInput = true)
@@ -1401,7 +1444,7 @@ class OutboundActivity : AppCompatActivity() {
                     // 🔧 更新为新的API结构，使用snake_case字段名
                     OutboundRequest(
                         sku_code = item.sku,  // 主要字段
-                        location_code = if (item.location == "无货位") null else item.location,  // 无货位时传null
+                        location_code = item.location,  // 直接传递库位编码，包括"无货位"
                         outbound_quantity = item.quantity,  // 修复字段名
                         operator_id = userId,  // 必需字段
                         batch_number = if (item.batch.isNotEmpty()) item.batch else null,
@@ -1755,12 +1798,8 @@ class OutboundActivity : AppCompatActivity() {
     
     override fun onDestroy() {
         super.onDestroy()
-        try {
-            unregisterReceiver(scanReceiver)
-        } catch (e: Exception) {
-            Log.e("WMS_OUTBOUND", "注销广播接收器失败: ${e.message}")
-        }
-        Log.d("WMS_OUTBOUND", "�� 出库页面销毁")
+        // 移除重复的unregisterReceiver调用，因为已经在onPause中处理了
+        Log.d("WMS_OUTBOUND", "📤 出库页面销毁")
     }
 
     private fun createNewItem(targetSku: String, colorData: ColorInfo, productData: Product, presetQuantity: Int, locationStocks: Map<String, Int>, defaultLocation: String, defaultLocationStock: Int) {

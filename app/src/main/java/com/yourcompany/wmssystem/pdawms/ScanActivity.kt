@@ -30,13 +30,6 @@ class ScanActivity : AppCompatActivity() {
     // 统一导航栏
     private lateinit var unifiedNavBar: UnifiedNavBar
     
-    // 扫码广播接收器
-    private val scanReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            intent?.let { handleScanIntent(it) }
-        }
-    }
-    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_scan)
@@ -44,7 +37,36 @@ class ScanActivity : AppCompatActivity() {
         setupViews()
         initUnifiedNavBar()
         setupClickListeners()
-        registerScanReceivers()
+        
+        // 使用ScanFocusManager注册扫码处理
+        ScanFocusManager.register(this, editSearch) { scanData, action ->
+            // 自定义扫码处理逻辑
+            editSearch.requestFocus()
+            editSearch.setText(scanData)
+            editSearch.setSelection(scanData.length)
+            Toast.makeText(this, "📱 扫码输入: $scanData", Toast.LENGTH_SHORT).show()
+            performSearch()
+        }
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        ScanFocusManager.setFocusedActivity(this, true)
+    }
+    
+    override fun onPause() {
+        super.onPause()
+        ScanFocusManager.setFocusedActivity(this, false)
+    }
+    
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        ScanFocusManager.setFocusedActivity(this, hasFocus)
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        ScanFocusManager.unregister(this)
     }
     
     private fun setupViews() {
@@ -299,68 +321,6 @@ class ScanActivity : AppCompatActivity() {
         if (show) {
             txtResult.text = "🔍 搜索中..."
             txtResult.setTextColor(Color.parseColor("#2196F3"))
-        }
-    }
-    
-    private fun registerScanReceivers() {
-        val scanActions = listOf(
-            "android.intent.action.SCANRESULT",
-            "android.intent.ACTION_DECODE_DATA", 
-            "com.symbol.datawedge.api.RESULT_ACTION",
-            "com.honeywell.decode.intent.action.SCAN_RESULT",
-            "nlscan.action.SCANNER_RESULT",
-            "scan.rcv.message"
-        )
-        
-        scanActions.forEach { action ->
-            val filter = IntentFilter(action)
-            registerReceiver(scanReceiver, filter)
-        }
-        
-        Log.d("WMS_SCAN", "已注册${scanActions.size}个扫码广播接收器")
-    }
-    
-    private fun handleScanIntent(intent: Intent) {
-        val action = intent.action
-        var barcode: String? = null
-        
-        when (action) {
-            "android.intent.action.SCANRESULT" -> {
-                barcode = intent.getStringExtra("value") ?: intent.getStringExtra("SCAN_RESULT")
-            }
-            "android.intent.ACTION_DECODE_DATA" -> {
-                barcode = intent.getStringExtra("barcode_string") ?: intent.getStringExtra("data")
-            }
-            "com.symbol.datawedge.api.RESULT_ACTION" -> {
-                barcode = intent.getStringExtra("com.symbol.datawedge.api.RESULT_GET_VERSION_INFO")
-                    ?: intent.getStringExtra("com.symbol.datawedge.data_string")
-            }
-            "com.honeywell.decode.intent.action.SCAN_RESULT" -> {
-                barcode = intent.getStringExtra("data")
-            }
-            "nlscan.action.SCANNER_RESULT" -> {
-                barcode = intent.getStringExtra("SCAN_RESULT")
-            }
-            "scan.rcv.message" -> {
-                barcode = intent.getStringExtra("barocode") ?: intent.getStringExtra("barcode")
-            }
-        }
-        
-        if (!barcode.isNullOrEmpty()) {
-            runOnUiThread {
-                editSearch.setText(barcode)
-                Toast.makeText(this, "📱 扫码输入: $barcode", Toast.LENGTH_SHORT).show()
-                performSearch()
-            }
-        }
-    }
-    
-    override fun onDestroy() {
-        super.onDestroy()
-        try {
-            unregisterReceiver(scanReceiver)
-        } catch (e: Exception) {
-            Log.w("ScanActivity", "注销广播接收器失败: ${e.message}")
         }
     }
 } 
