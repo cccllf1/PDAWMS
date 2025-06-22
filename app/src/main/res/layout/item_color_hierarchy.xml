@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cardView"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
-    android:layout_marginStart="24dp"
+    android:layout_marginStart="32dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?android:attr/selectableItemBackground"
     app:cardCornerRadius="8dp"
-    app:cardElevation="2dp"
+    app:cardElevation="1dp"
     app:cardBackgroundColor="#F5F5F5">
 
     <LinearLayout
@@ -15,14 +19,16 @@
         android:orientation="horizontal"
         android:padding="12dp">
 
-        <!-- 颜色图片 -->
-        <ImageView
+        <!-- 颜色图片 - 简化版本 -->
+        <TextView
             android:id="@+id/imgColor"
-            android:layout_width="60dp"
-            android:layout_height="60dp"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             android:layout_marginEnd="12dp"
-            android:scaleType="centerCrop"
-            android:background="@drawable/card_background_with_border" />
+            android:background="#FFF3E0"
+            android:gravity="center"
+            android:text="🎨"
+            android:textSize="20sp" />
 
         <!-- 颜色信息 -->
         <LinearLayout
@@ -41,36 +47,43 @@
                 android:textStyle="bold"
                 android:textColor="@android:color/black" />
 
-            <!-- 颜色库存 -->
-            <TextView
-                android:id="@+id/txtColorStock"
-                android:layout_width="wrap_content"
+            <!-- 库存和SKU数量 -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="库存: 0件"
-                android:textSize="12sp"
-                android:textColor="@android:color/darker_gray"
-                android:layout_marginTop="4dp" />
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp">
 
-            <!-- SKU数量 -->
-            <TextView
-                android:id="@+id/txtSkuCount"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="SKU: 0个"
-                android:textSize="12sp"
-                android:textColor="@android:color/darker_gray"
-                android:layout_marginTop="4dp" />
+                <TextView
+                    android:id="@+id/txtColorStock"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="库存: 0件"
+                    android:textSize="12sp"
+                    android:textColor="@android:color/darker_gray" />
+
+                <TextView
+                    android:id="@+id/txtSkuCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SKU: 0个"
+                    android:textSize="12sp"
+                    android:textColor="@android:color/darker_gray" />
+
+            </LinearLayout>
 
         </LinearLayout>
 
         <!-- 展开图标 -->
-        <ImageView
+        <TextView
             android:id="@+id/expandIcon"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
-            android:src="@drawable/ic_launcher_foreground"
-            android:layout_marginStart="8dp" />
+            android:text="▼"
+            android:textSize="12sp"
+            android:textColor="@android:color/darker_gray" />
 
     </LinearLayout>
 

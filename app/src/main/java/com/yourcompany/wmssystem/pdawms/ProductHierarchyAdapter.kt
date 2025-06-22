@@ -45,29 +45,29 @@ class ProductHierarchyAdapter(
 
     // 产品ViewHolder
     class ProductViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val imgProduct: ImageView = itemView.findViewById(R.id.imgProduct)
+        val imgProduct: TextView = itemView.findViewById(R.id.imgProduct)
         val txtStockBadge: TextView = itemView.findViewById(R.id.txtStockBadge)
         val txtProductName: TextView = itemView.findViewById(R.id.txtProductName)
         val txtSearchType: TextView = itemView.findViewById(R.id.txtSearchType)
         val txtProductCode: TextView = itemView.findViewById(R.id.txtProductCode)
         val txtColorCount: TextView = itemView.findViewById(R.id.txtColorCount)
-        val expandIcon: ImageView = itemView.findViewById(R.id.expandIcon)
+        val expandIcon: TextView = itemView.findViewById(R.id.expandIcon)
         val cardView: View = itemView
     }
 
     // 颜色ViewHolder
     class ColorViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val imgColor: ImageView = itemView.findViewById(R.id.imgColor)
+        val imgColor: TextView = itemView.findViewById(R.id.imgColor)
         val txtColorName: TextView = itemView.findViewById(R.id.txtColorName)
         val txtColorStock: TextView = itemView.findViewById(R.id.txtColorStock)
         val txtSkuCount: TextView = itemView.findViewById(R.id.txtSkuCount)
-        val expandIcon: ImageView = itemView.findViewById(R.id.expandIcon)
+        val expandIcon: TextView = itemView.findViewById(R.id.expandIcon)
         val cardView: View = itemView
     }
 
     // SKU ViewHolder
     class SkuViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val imgSku: ImageView = itemView.findViewById(R.id.imgSku)
+        val imgSku: TextView = itemView.findViewById(R.id.imgSku)
         val txtSkuCode: TextView = itemView.findViewById(R.id.txtSkuCode)
         val txtSkuSize: TextView = itemView.findViewById(R.id.txtSkuSize)
         val txtSkuStock: TextView = itemView.findViewById(R.id.txtSkuStock)
@@ -84,28 +84,71 @@ class ProductHierarchyAdapter(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-        return when (viewType) {
-            TYPE_PRODUCT -> {
-                val view = LayoutInflater.from(context).inflate(R.layout.item_product_hierarchy, parent, false)
-                ProductViewHolder(view)
+        return try {
+            when (viewType) {
+                TYPE_PRODUCT -> {
+                    val view = LayoutInflater.from(context).inflate(R.layout.item_product_hierarchy, parent, false)
+                    ProductViewHolder(view)
+                }
+                TYPE_COLOR -> {
+                    val view = LayoutInflater.from(context).inflate(R.layout.item_color_hierarchy, parent, false)
+                    ColorViewHolder(view)
+                }
+                TYPE_SKU -> {
+                    val view = LayoutInflater.from(context).inflate(R.layout.item_sku_hierarchy, parent, false)
+                    SkuViewHolder(view)
+                }
+                else -> throw IllegalArgumentException("Unknown view type: $viewType")
             }
-            TYPE_COLOR -> {
-                val view = LayoutInflater.from(context).inflate(R.layout.item_color_hierarchy, parent, false)
-                ColorViewHolder(view)
+        } catch (e: Exception) {
+            Log.e("ProductHierarchyAdapter", "❌ 创建ViewHolder失败 (viewType=$viewType): ${e.message}", e)
+            
+            // 创建一个简单的备用布局，防止崩溃
+            val fallbackView = TextView(context).apply {
+                text = "布局加载失败"
+                setPadding(16, 16, 16, 16)
+                setTextColor(android.graphics.Color.RED)
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
             }
-            TYPE_SKU -> {
-                val view = LayoutInflater.from(context).inflate(R.layout.item_sku_hierarchy, parent, false)
-                SkuViewHolder(view)
-            }
-            else -> throw IllegalArgumentException("Unknown view type: $viewType")
+            
+            // 返回一个简单的ViewHolder
+            object : RecyclerView.ViewHolder(fallbackView) {}
         }
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        when (val item = items[position]) {
-            is HierarchyItem.ProductItem -> bindProductItem(holder as ProductViewHolder, item)
-            is HierarchyItem.ColorItem -> bindColorItem(holder as ColorViewHolder, item)
-            is HierarchyItem.SkuItem -> bindSkuItem(holder as SkuViewHolder, item)
+        try {
+            when (val item = items[position]) {
+                is HierarchyItem.ProductItem -> {
+                    if (holder is ProductViewHolder) {
+                        bindProductItem(holder, item)
+                    } else {
+                        // 备用ViewHolder，显示基本信息
+                        (holder.itemView as? TextView)?.text = "产品: ${item.product.product_name}"
+                    }
+                }
+                is HierarchyItem.ColorItem -> {
+                    if (holder is ColorViewHolder) {
+                        bindColorItem(holder, item)
+                    } else {
+                        (holder.itemView as? TextView)?.text = "颜色: ${item.color.color}"
+                    }
+                }
+                is HierarchyItem.SkuItem -> {
+                    if (holder is SkuViewHolder) {
+                        bindSkuItem(holder, item)
+                    } else {
+                        (holder.itemView as? TextView)?.text = "SKU: ${item.sku.sku_code}"
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("ProductHierarchyAdapter", "❌ 绑定ViewHolder失败 (position=$position): ${e.message}", e)
+            // 如果绑定失败，至少显示一个错误信息
+            (holder.itemView as? TextView)?.text = "数据绑定失败"
         }
     }
 
@@ -123,12 +166,10 @@ class ProductHierarchyAdapter(
         holder.txtColorCount.text = "颜色: ${colorCount}种"
         
         // 设置展开图标
-        holder.expandIcon.setImageResource(
-            if (item.isExpanded) R.drawable.ic_launcher_foreground else R.drawable.ic_launcher_foreground
-        )
+        holder.expandIcon.text = if (item.isExpanded) "▲" else "▼"
         
-        // 加载商品图片
-        loadImage(holder.imgProduct, product.image_path)
+        // 设置商品图片emoji（简化版本）
+        holder.imgProduct.text = "📦"
         
         // 点击展开/收起颜色
         holder.cardView.setOnClickListener {
@@ -149,12 +190,10 @@ class ProductHierarchyAdapter(
         holder.txtSkuCount.text = "SKU: ${skuCount}个"
         
         // 设置展开图标
-        holder.expandIcon.setImageResource(
-            if (item.isExpanded) R.drawable.ic_launcher_foreground else R.drawable.ic_launcher_foreground
-        )
+        holder.expandIcon.text = if (item.isExpanded) "▲" else "▼"
         
-        // 加载颜色图片
-        loadImage(holder.imgColor, color.image_path)
+        // 设置颜色图片emoji（简化版本）
+        holder.imgColor.text = "🎨"
         
         // 点击展开/收起SKU
         holder.cardView.setOnClickListener {
@@ -182,8 +221,8 @@ class ProductHierarchyAdapter(
             holder.txtExternalCodes.text = "外部条码: 无"
         }
         
-        // 加载SKU图片
-        loadImage(holder.imgSku, sku.image_path)
+        // 设置SKU图片emoji（简化版本）
+        holder.imgSku.text = "📋"
         
         // 整个SKU卡片点击进入外部条码管理
         holder.cardView.setOnClickListener {
@@ -266,28 +305,7 @@ class ProductHierarchyAdapter(
         }
     }
 
-    private fun loadImage(imageView: ImageView, imagePath: String?) {
-        val imageUrl = getImageUrl(imagePath)
-        
-        // 严格的URL验证，防止Native崩溃
-        if (isValidImageUrl(imageUrl)) {
-            try {
-                Log.d("ProductHierarchyAdapter", "加载图片: $imageUrl")
-                Glide.with(context)
-                    .load(imageUrl)
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .placeholder(R.drawable.ic_launcher_foreground)
-                    .error(R.drawable.ic_launcher_foreground)
-                    .into(imageView)
-            } catch (e: Exception) {
-                Log.e("ProductHierarchyAdapter", "Glide加载图片失败: ${e.message}", e)
-                imageView.setImageResource(R.drawable.ic_launcher_foreground)
-            }
-        } else {
-            Log.w("ProductHierarchyAdapter", "无效的图片URL，使用占位图: $imageUrl")
-            imageView.setImageResource(R.drawable.ic_launcher_foreground)
-        }
-    }
+
     
     private fun isValidImageUrl(url: String?): Boolean {
         if (url.isNullOrEmpty()) return false
