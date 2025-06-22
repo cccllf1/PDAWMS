@@ -41,7 +41,7 @@
             android:text="搜索"
             android:textSize="12sp"
             android:textColor="#FFFFFF"
-            android:background="@drawable/nav_button_selector" />
+            android:background="@drawable/btn_blue_round" />
 
         <Button
             android:id="@+id/btnClear"
