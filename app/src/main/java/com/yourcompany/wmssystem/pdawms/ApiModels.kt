@@ -58,9 +58,23 @@ data class Product(
     @SerializedName("color_count") val color_count: Int?,
     @SerializedName("colors") val colors: List<ColorInfo>?,
     @SerializedName("skus") val skus: List<SkuInfo>?,
-    @SerializedName("matched_sku") val matched_sku: SkuInfo?,
+    @SerializedName("matched_sku") val matched_sku: MatchedSku?,
+    @SerializedName("query_type") val query_type: String?,
+    @SerializedName("query_code") val query_code: String?,
     @SerializedName("created_at") val created_at: String?,
     @SerializedName("updated_at") val updated_at: String?
+)
+
+// 精确匹配的SKU信息 - 用于API返回的matched_sku字段
+data class MatchedSku(
+    @SerializedName("sku_code") val sku_code: String,
+    @SerializedName("sku_color") val sku_color: String?,
+    @SerializedName("sku_size") val sku_size: String?,
+    @SerializedName("image_path") val image_path: String?,
+    @SerializedName("stock_quantity") val stock_quantity: Int?,
+    @SerializedName("sku_total_quantity") val sku_total_quantity: Int?,
+    @SerializedName("locations") val locations: List<LocationStock>?,
+    @SerializedName("external_codes") val external_codes: List<ExternalCode>?
 )
 
 // 外部条码信息

@@ -126,84 +126,35 @@ class ScanActivity : AppCompatActivity() {
         
         Log.d("ScanActivity", "检测到查询类型: $searchType")
         
-        // 1. 直接尝试用 /api/products/code/{code} 端点（支持产品代码和SKU代码）
+        // 统一使用 /api/products/code/{code} 端点（现在支持产品代码、SKU代码和外部条码）
         try {
-            Log.d("ScanActivity", "尝试产品/SKU代码查询: $query")
+            Log.d("ScanActivity", "使用统一API查询: $query")
             val response = ApiClient.getApiService().getProductByCode(query)
-            Log.d("ScanActivity", "产品/SKU代码查询HTTP状态: ${response.code()}, 是否成功: ${response.isSuccessful}")
+            Log.d("ScanActivity", "统一API查询HTTP状态: ${response.code()}, 是否成功: ${response.isSuccessful}")
             if (response.isSuccessful) {
                 val apiResponse = response.body()
-                Log.d("ScanActivity", "产品/SKU代码查询响应: success=${apiResponse?.success}, data存在=${apiResponse?.data != null}")
-                Log.d("ScanActivity", "产品/SKU代码查询完整响应: $apiResponse")
+                Log.d("ScanActivity", "统一API查询响应: success=${apiResponse?.success}, data存在=${apiResponse?.data != null}")
+                Log.d("ScanActivity", "统一API查询完整响应: $apiResponse")
                 if (apiResponse?.success == true && apiResponse.data != null) {
                     displayProductResult(apiResponse.data, searchType)
                     return
                 } else {
-                    Log.d("ScanActivity", "产品/SKU代码查询API返回失败或无数据: ${apiResponse?.error_message}")
+                    Log.d("ScanActivity", "统一API查询返回失败或无数据: ${apiResponse?.error_message}")
                 }
             } else {
-                Log.d("ScanActivity", "产品/SKU代码查询HTTP失败: ${response.code()} - ${response.message()}")
+                Log.d("ScanActivity", "统一API查询HTTP失败: ${response.code()} - ${response.message()}")
                 val errorBody = response.errorBody()?.string()
-                Log.d("ScanActivity", "产品/SKU代码查询错误响应体: $errorBody")
+                Log.d("ScanActivity", "统一API查询错误响应体: $errorBody")
             }
         } catch (e: Exception) {
-            Log.e("ScanActivity", "产品/SKU代码查询异常: ${e.message}", e)
+            Log.e("ScanActivity", "统一API查询异常: ${e.message}", e)
         }
         
-        // 2. 尝试外部条码查询（特别是对于纯数字查询）
-        try {
-            Log.d("ScanActivity", "尝试外部条码查询: $query")
-            val response = ApiClient.getApiService().getProductByExternalCode(query)
-            Log.d("ScanActivity", "外部条码查询HTTP状态: ${response.code()}, 是否成功: ${response.isSuccessful}")
-            if (response.isSuccessful) {
-                val apiResponse = response.body()
-                Log.d("ScanActivity", "外部条码查询响应: success=${apiResponse?.success}, data存在=${apiResponse?.data != null}")
-                Log.d("ScanActivity", "外部条码查询完整响应: $apiResponse")
-                if (apiResponse?.success == true && apiResponse.data != null) {
-                    displayProductResult(apiResponse.data, "外部条码")
-                    return
-                } else {
-                    Log.d("ScanActivity", "外部条码查询API返回失败或无数据: ${apiResponse?.error_message}")
-                }
-            } else {
-                Log.d("ScanActivity", "外部条码查询HTTP失败: ${response.code()} - ${response.message()}")
-                val errorBody = response.errorBody()?.string()
-                Log.d("ScanActivity", "外部条码查询错误响应体: $errorBody")
-            }
-        } catch (e: Exception) {
-            Log.e("ScanActivity", "外部条码查询异常: ${e.message}", e)
-        }
-        
-        // 3. 尝试通用搜索API
-        try {
-            Log.d("ScanActivity", "尝试通用搜索: $query")
-            val response = ApiClient.getApiService().searchProducts(query)
-            Log.d("ScanActivity", "通用搜索HTTP状态: ${response.code()}, 是否成功: ${response.isSuccessful}")
-            if (response.isSuccessful) {
-                val apiResponse = response.body()
-                Log.d("ScanActivity", "通用搜索响应: success=${apiResponse?.success}, data存在=${apiResponse?.data != null}")
-                Log.d("ScanActivity", "通用搜索完整响应: $apiResponse")
-                if (apiResponse?.success == true && apiResponse.data != null && !apiResponse.data.products.isNullOrEmpty()) {
-                    val firstProduct = apiResponse.data.products[0]
-                    displayProductResult(firstProduct, "通用搜索")
-                    return
-                } else {
-                    Log.d("ScanActivity", "通用搜索无结果或失败: ${apiResponse?.error_message}")
-                }
-            } else {
-                Log.d("ScanActivity", "通用搜索HTTP失败: ${response.code()} - ${response.message()}")
-                val errorBody = response.errorBody()?.string()
-                Log.d("ScanActivity", "通用搜索错误响应体: $errorBody")
-            }
-        } catch (e: Exception) {
-            Log.e("ScanActivity", "通用搜索异常: ${e.message}", e)
-        }
-        
-        // 4. 如果都失败了，显示未找到
-        Log.d("ScanActivity", "所有查询方式都失败")
+        // 如果失败了，显示未找到
+        Log.d("ScanActivity", "统一API查询失败")
         runOnUiThread {
             showLoading(false)
-            txtResult.text = "⚠️ 未找到匹配的商品或SKU\n搜索内容: $query\n检测类型: $searchType\n\n已尝试:\n• 产品/SKU代码查询\n• 外部条码查询\n• 通用搜索\n\n请检查输入是否正确"
+            txtResult.text = "⚠️ 未找到匹配的商品或SKU\n搜索内容: $query\n检测类型: $searchType\n\n统一API端点: /api/products/code/{code}\n现已支持所有查询类型！"
             txtResult.setTextColor(Color.parseColor("#FF9800"))
         }
     }
@@ -251,8 +202,19 @@ class ScanActivity : AppCompatActivity() {
         }
     }
     
-    private fun showExternalCodeManagementDialog(sku: SkuInfo, productCode: String, color: String) {
-        val dialog = ExternalCodesDialogFragment.newInstance(sku, productCode, color)
+    private fun showExternalCodeManagementDialog(sku: MatchedSku, productCode: String, color: String) {
+        // 将MatchedSku转换为SkuInfo类型
+        val skuInfo = SkuInfo(
+            sku_code = sku.sku_code,
+            sku_color = sku.sku_color,
+            sku_size = sku.sku_size,
+            image_path = sku.image_path,
+            stock_quantity = sku.stock_quantity,
+            sku_total_quantity = sku.sku_total_quantity,
+            locations = sku.locations,
+            external_codes = sku.external_codes
+        )
+        val dialog = ExternalCodesDialogFragment.newInstance(skuInfo, productCode, color)
         dialog.show(supportFragmentManager, "ExternalCodesDialog")
     }
     

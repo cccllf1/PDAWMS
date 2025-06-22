@@ -795,39 +795,53 @@ class InboundActivity : AppCompatActivity() {
 
     // This is the new, definitive method for processing codes
     private suspend fun processScannedCode(scannedCode: String) {
-        // 1. Extract base product code for a guaranteed API call
-        val baseProductCode = scannedCode.split("-").firstOrNull() ?: scannedCode
+        Log.d("InboundActivity", "🔍 入库页面智能查询: $scannedCode")
         
         val product: Product? = try {
-            val response = ApiClient.getApiService().getProductByCode(baseProductCode)
+            // 🎯 使用统一的智能API（支持产品代码、SKU代码、外部条码）
+            val response = ApiClient.getApiService().getProductByCode(scannedCode)
             if (response.isSuccessful && response.body()?.success == true) {
-                response.body()?.data
+                val productData = response.body()?.data
+                val queryType = productData?.query_type ?: "unknown"
+                Log.d("InboundActivity", "✅ 查询成功: $scannedCode -> 类型: $queryType")
+                productData
             } else {
-                Toast.makeText(this, "API查询失败: ${response.body()?.error_message}", Toast.LENGTH_SHORT).show()
+                val errorMsg = response.body()?.error_message ?: "未知错误"
+                Log.w("InboundActivity", "❌ 查询失败: $scannedCode -> $errorMsg")
+                Toast.makeText(this, "查询失败: $errorMsg", Toast.LENGTH_SHORT).show()
                 null
             }
         } catch (e: Exception) {
-            Log.e("InboundActivity", "API异常 for $baseProductCode", e)
-            Toast.makeText(this, "网络或API错误: ${e.message}", Toast.LENGTH_SHORT).show()
+            Log.e("InboundActivity", "❌ 网络异常: $scannedCode -> ${e.message}", e)
+            Toast.makeText(this, "网络错误: ${e.message}", Toast.LENGTH_SHORT).show()
             null
         }
 
         if (product == null) {
-            Toast.makeText(this, "无法获取商品[$baseProductCode]的详细信息", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "无法获取商品信息", Toast.LENGTH_LONG).show()
             return
         }
         
-        // At this point, `product` contains all color/size/SKU info.
-        // We now determine the EXACT SKU the user wants.
-        val localParsedInfo = parseProductCodeLocally(scannedCode)
-        val targetColor = localParsedInfo?.color ?: product.colors?.firstOrNull()?.color ?: "N/A"
-        val targetSize = localParsedInfo?.size ?: product.colors?.firstOrNull()?.sizes?.firstOrNull()?.sku_size ?: "N/A"
-
-        val targetSkuInfo = product.colors?.asSequence()
-            ?.flatMap { it.sizes ?: emptyList() }
-            ?.find { it.sku_color == targetColor && it.sku_size == targetSize }
-
-        val finalSkuCode = targetSkuInfo?.sku_code ?: scannedCode // Fallback to original code if specific SKU not found
+        // 🎯 利用API返回的智能匹配结果
+        val finalSkuCode: String
+        val targetColor: String
+        val targetSize: String
+        
+        if (product.matched_sku != null) {
+            // API找到了精确的SKU匹配（SKU查询或外部条码查询）
+            finalSkuCode = product.matched_sku.sku_code
+            targetColor = product.matched_sku.sku_color ?: "N/A"
+            targetSize = product.matched_sku.sku_size ?: "N/A"
+            Log.d("InboundActivity", "🎯 使用API匹配的SKU: $finalSkuCode ($targetColor-$targetSize)")
+        } else {
+            // 产品代码查询，使用第一个可用的SKU
+            val firstColor = product.colors?.firstOrNull()
+            val firstSize = firstColor?.sizes?.firstOrNull()
+            finalSkuCode = firstSize?.sku_code ?: scannedCode
+            targetColor = firstColor?.color ?: "N/A"
+            targetSize = firstSize?.sku_size ?: "N/A"
+            Log.d("InboundActivity", "📦 使用默认SKU: $finalSkuCode ($targetColor-$targetSize)")
+        }
 
         val location = editLocationInput.text.toString().trim().ifEmpty { "无货位" }
 
@@ -854,6 +868,7 @@ class InboundActivity : AppCompatActivity() {
             )
             
             // Set SKU options in adapter BEFORE adding
+            val baseProductCode = finalSkuCode.split("-").firstOrNull() ?: finalSkuCode
             inboundListAdapter.setProductSkuOptions(baseProductCode, product.colors, product.skus)
             
             inboundItems.add(0, newItem)
