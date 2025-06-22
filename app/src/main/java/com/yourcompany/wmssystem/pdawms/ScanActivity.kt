@@ -9,38 +9,22 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.*
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
-// SKU绑定数据类
-data class SkuBinding(
-    val sku_code: String,
-    val external_code: String,
-    val sku_name: String
-)
-
 class ScanActivity : AppCompatActivity() {
     
-    private lateinit var editSku: EditText
-    private lateinit var editExternalCode: EditText
-    private lateinit var editSkuName: EditText
-    private lateinit var btnScanSku: Button
-    private lateinit var btnScanExternal: Button
-    private lateinit var btnBind: Button
+    private lateinit var editSearch: EditText
+    private lateinit var btnSearch: Button
     private lateinit var btnClear: Button
-    // private lateinit var btnBack: Button // 已移除返回按钮，使用统一导航栏
-    private lateinit var btnRefresh: Button
     private lateinit var txtResult: TextView
     private lateinit var txtStatus: TextView
-    private lateinit var listBindings: ListView
     private lateinit var progressBar: ProgressBar
+    private lateinit var layoutResults: LinearLayout
     
     // 统一导航栏
     private lateinit var unifiedNavBar: UnifiedNavBar
-    
-    private val bindingList = mutableListOf<SkuBinding>()
     
     // 扫码广播接收器
     private val scanReceiver = object : BroadcastReceiver() {
@@ -57,26 +41,19 @@ class ScanActivity : AppCompatActivity() {
         initUnifiedNavBar()
         setupClickListeners()
         registerScanReceivers()
-        loadExistingBindings()
     }
     
     private fun setupViews() {
-        editSku = findViewById(R.id.editSku)
-        editExternalCode = findViewById(R.id.editExternalCode)
-        editSkuName = findViewById(R.id.editSkuName)
-        btnScanSku = findViewById(R.id.btnScanSku)
-        btnScanExternal = findViewById(R.id.btnScanExternal)
-        btnBind = findViewById(R.id.btnBind)
+        editSearch = findViewById(R.id.editSearch)
+        btnSearch = findViewById(R.id.btnSearch)
         btnClear = findViewById(R.id.btnClear)
-        // btnBack = findViewById(R.id.btnBack) // 已移除返回按钮
-        btnRefresh = findViewById(R.id.btnRefresh)
         txtResult = findViewById(R.id.txtResult)
         txtStatus = findViewById(R.id.txtStatus)
-        listBindings = findViewById(R.id.listBindings)
         progressBar = findViewById(R.id.progressBar)
+        layoutResults = findViewById(R.id.layoutResults)
         
-        txtStatus.text = "📱 SKU与外部条码绑定工具"
-        txtResult.text = "请扫描或输入SKU和外部条码"
+        txtStatus.text = "🔍 商品/SKU搜索与外部条码管理"
+        txtResult.text = "请扫描或输入商品代码、SKU或外部条码进行搜索"
     }
     
     private fun initUnifiedNavBar() {
@@ -85,65 +62,291 @@ class ScanActivity : AppCompatActivity() {
     }
     
     private fun setupClickListeners() {
-        // btnBack.setOnClickListener { finish() } // 已移除返回按钮
-        
-        btnScanSku.setOnClickListener {
-            editSku.requestFocus()
-            Toast.makeText(this, "请使用PDA扫描SKU", Toast.LENGTH_SHORT).show()
-        }
-        
-        btnScanExternal.setOnClickListener {
-            editExternalCode.requestFocus()
-            Toast.makeText(this, "请使用PDA扫描外部条码", Toast.LENGTH_SHORT).show()
-        }
-        
-        btnBind.setOnClickListener {
-            bindSkuToExternalCode()
+        btnSearch.setOnClickListener {
+            performSearch()
         }
         
         btnClear.setOnClickListener {
             clearForm()
         }
         
-        btnRefresh.setOnClickListener {
-            loadExistingBindings()
+        // 监听输入框的搜索动作
+        editSearch.setOnEditorActionListener { _, _, _ ->
+            performSearch()
+            true
         }
     }
     
-    private fun loadExistingBindings() {
-        // 目前API可能没有获取所有绑定的接口，所以加载模拟数据
-        showLoading(true)
-        txtStatus.text = "加载绑定数据中..."
+    private fun performSearch() {
+        val query = editSearch.text.toString().trim()
+        if (query.isEmpty()) {
+            Toast.makeText(this, "请输入搜索内容", Toast.LENGTH_SHORT).show()
+            return
+        }
         
+        showLoading(true)
+        clearResults()
+        
+        // 尝试多种查询方式
         lifecycleScope.launch {
             try {
-                // 这里可以在API支持时替换为真实的绑定查询
-                // val response = ApiClient.getApiService().getAllSkuBindings()
-                
-                // 暂时使用模拟数据
-                loadMockBindings()
-                
-                runOnUiThread {
-                    updateBindingsList()
-                    showLoading(false)
-                }
+                // 尝试所有可能的查询方式
+                performMultipleSearch(query)
             } catch (e: Exception) {
-                Log.e("ScanActivity", "加载绑定失败: ${e.message}")
+                Log.e("ScanActivity", "搜索失败: ${e.message}")
                 runOnUiThread {
-                    loadMockBindings()
-                    updateBindingsList()
                     showLoading(false)
-                    txtResult.text = "加载失败，显示模拟数据"
-                    txtResult.setTextColor(Color.parseColor("#FF9800"))
+                    txtResult.text = "❌ 搜索失败: ${e.message}"
+                    txtResult.setTextColor(Color.parseColor("#F44336"))
                 }
             }
         }
     }
     
+    private suspend fun performMultipleSearch(query: String) {
+        Log.d("ScanActivity", "开始搜索: $query")
+        
+        // 1. 直接尝试用 /api/products/code/{code} 端点（支持产品代码和SKU代码）
+        try {
+            Log.d("ScanActivity", "尝试产品/SKU代码查询: $query")
+            val response = ApiClient.getApiService().getProductByCode(query)
+            Log.d("ScanActivity", "产品/SKU代码查询HTTP状态: ${response.code()}, 是否成功: ${response.isSuccessful}")
+            if (response.isSuccessful) {
+                val apiResponse = response.body()
+                Log.d("ScanActivity", "产品/SKU代码查询响应: success=${apiResponse?.success}, data存在=${apiResponse?.data != null}")
+                Log.d("ScanActivity", "产品/SKU代码查询完整响应: $apiResponse")
+                if (apiResponse?.success == true && apiResponse.data != null) {
+                    val searchType = if (query.contains("-")) "SKU代码" else "产品代码"
+                    displayProductResult(apiResponse.data, searchType)
+                    return
+                } else {
+                    Log.d("ScanActivity", "产品/SKU代码查询API返回失败或无数据: ${apiResponse?.error_message}")
+                }
+            } else {
+                Log.d("ScanActivity", "产品/SKU代码查询HTTP失败: ${response.code()} - ${response.message()}")
+                val errorBody = response.errorBody()?.string()
+                Log.d("ScanActivity", "产品/SKU代码查询错误响应体: $errorBody")
+            }
+        } catch (e: Exception) {
+            Log.e("ScanActivity", "产品/SKU代码查询异常: ${e.message}", e)
+        }
+        
+        // 2. 尝试通用搜索API
+        try {
+            Log.d("ScanActivity", "尝试通用搜索: $query")
+            val response = ApiClient.getApiService().searchProducts(query)
+            Log.d("ScanActivity", "通用搜索HTTP状态: ${response.code()}, 是否成功: ${response.isSuccessful}")
+            if (response.isSuccessful) {
+                val apiResponse = response.body()
+                Log.d("ScanActivity", "通用搜索响应: success=${apiResponse?.success}, data存在=${apiResponse?.data != null}")
+                Log.d("ScanActivity", "通用搜索完整响应: $apiResponse")
+                if (apiResponse?.success == true && apiResponse.data != null && !apiResponse.data.products.isNullOrEmpty()) {
+                    val firstProduct = apiResponse.data.products[0]
+                    displayProductResult(firstProduct, "通用搜索")
+                    return
+                } else {
+                    Log.d("ScanActivity", "通用搜索无结果或失败: ${apiResponse?.error_message}")
+                }
+            } else {
+                Log.d("ScanActivity", "通用搜索HTTP失败: ${response.code()} - ${response.message()}")
+                val errorBody = response.errorBody()?.string()
+                Log.d("ScanActivity", "通用搜索错误响应体: $errorBody")
+            }
+        } catch (e: Exception) {
+            Log.e("ScanActivity", "通用搜索异常: ${e.message}", e)
+        }
+        
+        // 1. 尝试按外部条码查询（您说这个能工作）
+        try {
+            Log.d("ScanActivity", "尝试外部条码查询: $query")
+            val response = ApiClient.getApiService().getProductByExternalCode(query)
+            Log.d("ScanActivity", "外部条码查询HTTP状态: ${response.code()}, 是否成功: ${response.isSuccessful}")
+            if (response.isSuccessful) {
+                val apiResponse = response.body()
+                Log.d("ScanActivity", "外部条码查询响应: success=${apiResponse?.success}, data存在=${apiResponse?.data != null}")
+                Log.d("ScanActivity", "外部条码查询完整响应: $apiResponse")
+                if (apiResponse?.success == true && apiResponse.data != null) {
+                    displayProductResult(apiResponse.data, "外部条码")
+                    return
+                } else {
+                    Log.d("ScanActivity", "外部条码查询API返回失败或无数据: ${apiResponse?.error_message}")
+                }
+            } else {
+                Log.d("ScanActivity", "外部条码查询HTTP失败: ${response.code()} - ${response.message()}")
+                val errorBody = response.errorBody()?.string()
+                Log.d("ScanActivity", "外部条码查询错误响应体: $errorBody")
+            }
+        } catch (e: Exception) {
+            Log.e("ScanActivity", "外部条码查询异常: ${e.message}", e)
+        }
+        
+        // 2. 跳过SKU查询（API端点不存在）
+        Log.d("ScanActivity", "跳过SKU查询 - API端点不存在")
+        
+        // 3. 尝试按产品代码查询
+        try {
+            Log.d("ScanActivity", "尝试产品代码查询: $query")
+            val response = ApiClient.getApiService().getProductByCode(query)
+            Log.d("ScanActivity", "产品代码查询HTTP状态: ${response.code()}, 是否成功: ${response.isSuccessful}")
+            if (response.isSuccessful) {
+                val apiResponse = response.body()
+                Log.d("ScanActivity", "产品代码查询响应: success=${apiResponse?.success}, data存在=${apiResponse?.data != null}")
+                Log.d("ScanActivity", "产品代码查询完整响应: $apiResponse")
+                if (apiResponse?.success == true && apiResponse.data != null) {
+                    displayProductResult(apiResponse.data, "产品代码")
+                    return
+                } else {
+                    Log.d("ScanActivity", "产品代码查询API返回失败或无数据: ${apiResponse?.error_message}")
+                }
+            } else {
+                Log.d("ScanActivity", "产品代码查询HTTP失败: ${response.code()} - ${response.message()}")
+                val errorBody = response.errorBody()?.string()
+                Log.d("ScanActivity", "产品代码查询错误响应体: $errorBody")
+            }
+        } catch (e: Exception) {
+            Log.e("ScanActivity", "产品代码查询异常: ${e.message}", e)
+        }
+        
+        // 4. 如果都失败了，显示未找到
+        Log.d("ScanActivity", "所有查询方式都失败")
+        runOnUiThread {
+            showLoading(false)
+            txtResult.text = "⚠️ 未找到匹配的商品或SKU\n搜索内容: $query\n\n已尝试:\n• 通用搜索\n• 外部条码查询\n• SKU查询\n• 产品代码查询\n\n请检查日志获取详细错误信息"
+            txtResult.setTextColor(Color.parseColor("#FF9800"))
+        }
+    }
+    
+
+    
+    private fun displayProductResult(product: Product, searchType: String) {
+        runOnUiThread {
+            showLoading(false)
+            
+            val matchedSku = product.matched_sku
+            if (matchedSku != null) {
+                // 找到具体SKU
+                txtResult.text = buildString {
+                    append("✅ 通过${searchType}找到SKU\n")
+                    append("SKU: ${matchedSku.sku_code}\n")
+                    append("商品: ${product.product_name}\n")
+                    append("颜色: ${matchedSku.sku_color ?: "未知"}\n")
+                    append("尺码: ${matchedSku.sku_size ?: "未知"}\n")
+                    append("库存: ${matchedSku.sku_total_quantity ?: 0}\n")
+                    
+                    // 显示外部条码
+                    if (!matchedSku.external_codes.isNullOrEmpty()) {
+                        append("外部条码: ${matchedSku.external_codes.joinToString(", ")}")
+                    } else {
+                        append("外部条码: 无")
+                    }
+                }
+                txtResult.setTextColor(Color.parseColor("#4CAF50"))
+                
+                // 显示SKU位置信息
+                if (!matchedSku.locations.isNullOrEmpty()) {
+                    addLocationInfo(matchedSku.locations)
+                }
+                
+            } else {
+                // 只找到商品，没有具体SKU
+                txtResult.text = buildString {
+                    append("✅ 通过${searchType}找到商品\n")
+                    append("商品: ${product.product_name}\n")
+                    append("代码: ${product.product_code}\n")
+                    append("总库存: ${product.product_total_quantity ?: 0}\n")
+                    append("颜色数: ${product.color_count ?: 0}\n")
+                    append("SKU数: ${product.sku_count ?: 0}")
+                }
+                txtResult.setTextColor(Color.parseColor("#2196F3"))
+                
+                // 显示所有颜色和SKU
+                if (!product.colors.isNullOrEmpty()) {
+                    addColorAndSkuInfo(product.colors)
+                }
+            }
+        }
+    }
+    
+    private fun addLocationInfo(locations: List<LocationStock>) {
+        val locationText = TextView(this).apply {
+            text = "\n📍 库存位置:"
+            textSize = 14f
+            setTextColor(Color.parseColor("#333333"))
+            setPadding(8, 8, 8, 4)
+        }
+        layoutResults.addView(locationText)
+        
+                 locations.forEach { location ->
+             val locationView = TextView(this).apply {
+                 text = "  ${location.location_code}: ${location.stock_quantity}件"
+                 textSize = 12f
+                 setTextColor(Color.parseColor("#666666"))
+                 setPadding(16, 2, 8, 2)
+             }
+             layoutResults.addView(locationView)
+         }
+    }
+    
+    private fun addColorAndSkuInfo(colors: List<ColorInfo>) {
+        val colorText = TextView(this).apply {
+            text = "\n🎨 颜色详情:"
+            textSize = 14f
+            setTextColor(Color.parseColor("#333333"))
+            setPadding(8, 8, 8, 4)
+        }
+        layoutResults.addView(colorText)
+        
+        colors.forEach { color ->
+            val colorView = TextView(this).apply {
+                text = "  ${color.color}: ${color.color_total_quantity ?: 0}件 (${color.sku_count ?: 0}个SKU)"
+                textSize = 12f
+                setTextColor(Color.parseColor("#666666"))
+                setPadding(16, 2, 8, 2)
+            }
+            layoutResults.addView(colorView)
+            
+            // 显示该颜色下的SKU
+            color.sizes?.forEach { sku ->
+                val skuView = TextView(this).apply {
+                    text = "    ${sku.sku_code}: ${sku.sku_size} - ${sku.sku_total_quantity ?: 0}件"
+                    textSize = 11f
+                    setTextColor(Color.parseColor("#888888"))
+                    setPadding(24, 1, 8, 1)
+                }
+                layoutResults.addView(skuView)
+                
+                // 显示外部条码
+                if (!sku.external_codes.isNullOrEmpty()) {
+                    val codeView = TextView(this).apply {
+                        text = "      条码: ${sku.external_codes.joinToString(", ")}"
+                        textSize = 10f
+                        setTextColor(Color.parseColor("#999999"))
+                        setPadding(32, 1, 8, 1)
+                    }
+                    layoutResults.addView(codeView)
+                }
+            }
+        }
+    }
+    
+    private fun clearForm() {
+        editSearch.setText("")
+        txtResult.text = "请扫描或输入商品代码、SKU或外部条码进行搜索"
+        txtResult.setTextColor(Color.parseColor("#666666"))
+        clearResults()
+    }
+    
+    private fun clearResults() {
+        layoutResults.removeAllViews()
+    }
+    
     private fun showLoading(show: Boolean) {
         progressBar.visibility = if (show) View.VISIBLE else View.GONE
-        btnBind.isEnabled = !show
-        btnRefresh.isEnabled = !show
+        btnSearch.isEnabled = !show
+        if (show) {
+            txtResult.text = "🔍 搜索中..."
+            txtResult.setTextColor(Color.parseColor("#2196F3"))
+        }
     }
     
     private fun registerScanReceivers() {
@@ -191,252 +394,20 @@ class ScanActivity : AppCompatActivity() {
         }
         
         if (!barcode.isNullOrEmpty()) {
-            insertToFocusedEditText(barcode)
-        }
-    }
-    
-    private fun loadMockBindings() {
-        bindingList.clear()
-        bindingList.addAll(listOf(
-            SkuBinding("129092-黄色-M", "6901028015462", "黄色中码T恤"),
-            SkuBinding("129092-粉色-L", "8361611002473319463", "粉色大码T恤"),
-            SkuBinding("201234-蓝色-M", "9787810896771", "蓝色中码牛仔裤"),
-            SkuBinding("301456-白色-S", "1234567890123", "白色小码衬衫")
-        ))
-    }
-    
-    private fun insertToFocusedEditText(barcode: String) {
-        Log.d("WMS_SCAN", "📱 扫码结果: $barcode")
-        
-        runOnUiThread {
-            // 获取当前有焦点的EditText
-            val focusedView = currentFocus
-            if (focusedView is EditText) {
-                focusedView.setText(barcode)
-                txtResult.text = "📱 扫码输入: $barcode"
-                txtResult.setTextColor(Color.parseColor("#4CAF50"))
+            runOnUiThread {
+                editSearch.setText(barcode)
                 Toast.makeText(this, "📱 扫码输入: $barcode", Toast.LENGTH_SHORT).show()
-                
-                // 如果是SKU字段，尝试从API获取商品信息
-                if (focusedView == editSku) {
-                    lookupSkuInfo(barcode)
-                } else if (focusedView == editExternalCode) {
-                    lookupByExternalCode(barcode)
-                }
-            } else {
-                // 如果没有焦点的EditText，默认填入SKU字段
-                editSku.setText(barcode)
-                editSku.requestFocus()
-                txtResult.text = "📱 扫码到SKU: $barcode"
-                txtResult.setTextColor(Color.parseColor("#4CAF50"))
-                Toast.makeText(this, "📱 扫码到SKU: $barcode", Toast.LENGTH_SHORT).show()
-                lookupSkuInfo(barcode)
+                performSearch()
             }
         }
-    }
-    
-    private fun lookupSkuInfo(sku: String) {
-        lifecycleScope.launch {
-            try {
-                val response = ApiClient.getApiService().getProductByCode(sku)
-                if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse?.success == true && apiResponse.data != null) {
-                        // API现在返回单个Product对象，不是ProductListResponse
-                        val product = apiResponse.data
-                        val productName = product.product_name
-                        val matchedSku = product.matched_sku
-                        
-                        runOnUiThread {
-                            if (matchedSku != null) {
-                                editSkuName.setText("${productName} - ${matchedSku.sku_color} ${matchedSku.sku_size}")
-                            } else {
-                                editSkuName.setText(productName)
-                            }
-                            txtResult.text = "✅ 找到商品: $productName"
-                            txtResult.setTextColor(Color.parseColor("#4CAF50"))
-                        }
-                    } else {
-                        runOnUiThread {
-                            editSkuName.setText("未知商品")
-                            txtResult.text = "⚠️ 未找到SKU信息"
-                            txtResult.setTextColor(Color.parseColor("#FF9800"))
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("ScanActivity", "查询SKU失败: ${e.message}")
-                runOnUiThread {
-                    editSkuName.setText("查询失败")
-                    txtResult.text = "❌ 查询SKU失败: ${e.message}"
-                    txtResult.setTextColor(Color.parseColor("#F44336"))
-                }
-            }
-        }
-    }
-    
-    private fun lookupByExternalCode(externalCode: String) {
-        lifecycleScope.launch {
-            try {
-                val response = ApiClient.getApiService().getProductByExternalCode(externalCode)
-                if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse?.success == true && apiResponse.data != null) {
-                        // API现在返回单个Product对象，不是ProductListResponse
-                        val product = apiResponse.data
-                        val matchedSku = product.matched_sku
-                        
-                        runOnUiThread {
-                            if (matchedSku != null) {
-                                editSku.setText(matchedSku.sku_code)
-                                editSkuName.setText("${product.product_name} - ${matchedSku.sku_color} ${matchedSku.sku_size}")
-                                txtResult.text = "✅ 通过外部条码找到: ${matchedSku.sku_code}"
-                                txtResult.setTextColor(Color.parseColor("#4CAF50"))
-                            } else {
-                                editSkuName.setText(product.product_name)
-                                txtResult.text = "✅ 找到商品但无具体SKU"
-                                txtResult.setTextColor(Color.parseColor("#FF9800"))
-                            }
-                        }
-                    } else {
-                        runOnUiThread {
-                            txtResult.text = "⚠️ 未找到对应的SKU"
-                            txtResult.setTextColor(Color.parseColor("#FF9800"))
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("ScanActivity", "外部条码查询失败: ${e.message}")
-                runOnUiThread {
-                    txtResult.text = "❌ 外部条码查询失败"
-                    txtResult.setTextColor(Color.parseColor("#F44336"))
-                }
-            }
-        }
-    }
-    
-    private fun bindSkuToExternalCode() {
-        val sku = editSku.text.toString().trim()
-        val externalCode = editExternalCode.text.toString().trim()
-        val skuName = editSkuName.text.toString().trim()
-        
-        if (sku.isEmpty() || externalCode.isEmpty()) {
-            Toast.makeText(this, "请填写SKU和外部条码", Toast.LENGTH_SHORT).show()
-            return
-        }
-        
-        if (sku == externalCode) {
-            Toast.makeText(this, "SKU和外部条码不能相同", Toast.LENGTH_SHORT).show()
-            return
-        }
-        
-        // 检查是否已存在相同的绑定
-        val existingBinding = bindingList.find { it.external_code == externalCode }
-        if (existingBinding != null) {
-            AlertDialog.Builder(this)
-                .setTitle("绑定冲突")
-                .setMessage("外部条码 $externalCode 已绑定到 ${existingBinding.sku_code}，是否要重新绑定到 $sku？")
-                .setPositiveButton("重新绑定") { _, _ ->
-                    performBinding(sku, externalCode, skuName)
-                }
-                .setNegativeButton("取消", null)
-                .show()
-            return
-        }
-        
-        performBinding(sku, externalCode, skuName)
-    }
-    
-    private fun performBinding(sku: String, externalCode: String, skuName: String) {
-        showLoading(true)
-        txtStatus.text = "绑定中..."
-        
-        lifecycleScope.launch {
-            try {
-                // 使用API添加外部条码绑定
-                val requestBody = mapOf("external_code" to externalCode)
-                val response = ApiClient.getApiService().addSkuExternalCode(sku, requestBody)  // 路径参数已更新为snake_case
-                
-                if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse?.success == true) {
-                        // 创建新的绑定并添加到列表
-                        val newBinding = SkuBinding(sku, externalCode, skuName)
-                        bindingList.add(0, newBinding)
-                        
-                        runOnUiThread {
-                            updateBindingsList()
-                            clearForm()
-                            txtResult.text = "✅ 绑定成功: $sku ↔ $externalCode"
-                            txtResult.setTextColor(Color.parseColor("#4CAF50"))
-                            Toast.makeText(this@ScanActivity, "✅ 绑定成功", Toast.LENGTH_SHORT).show()
-                            showLoading(false)
-                        }
-                    } else {
-                        runOnUiThread {
-                            txtResult.text = "❌ 绑定失败: ${apiResponse?.error_message ?: "未知错误"}"
-                            txtResult.setTextColor(Color.parseColor("#F44336"))
-                            showLoading(false)
-                        }
-                    }
-                } else {
-                    runOnUiThread {
-                        txtResult.text = "❌ 绑定失败: HTTP ${response.code()}"
-                        txtResult.setTextColor(Color.parseColor("#F44336"))
-                        showLoading(false)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("ScanActivity", "绑定失败: ${e.message}")
-                runOnUiThread {
-                    // API失败时，仍然添加到本地列表（模拟成功）
-                    val newBinding = SkuBinding(sku, externalCode, skuName)
-                    bindingList.add(0, newBinding)
-                    updateBindingsList()
-                    clearForm()
-                    txtResult.text = "⚠️ 本地绑定成功（API连接失败）"
-                    txtResult.setTextColor(Color.parseColor("#FF9800"))
-                    Toast.makeText(this@ScanActivity, "⚠️ 本地绑定成功", Toast.LENGTH_SHORT).show()
-                    showLoading(false)
-                }
-            }
-        }
-    }
-    
-    private fun updateBindingsList() {
-        val displayItems = bindingList.map { binding ->
-            "${binding.sku_name}\nSKU: ${binding.sku_code}\n外部条码: ${binding.external_code}"
-        }
-        
-        val adapter = ArrayAdapter(
-            this, 
-            android.R.layout.simple_list_item_1,
-            displayItems
-        )
-        listBindings.adapter = adapter
-        
-        txtStatus.text = "📱 SKU绑定管理 (共${bindingList.size}条记录)"
-    }
-    
-    private fun clearForm() {
-        editSku.setText("")
-        editExternalCode.setText("")
-        editSkuName.setText("")
-        txtResult.text = "请扫描或输入SKU和外部条码"
-        txtResult.setTextColor(Color.parseColor("#666666"))
-        Toast.makeText(this, "表单已清空", Toast.LENGTH_SHORT).show()
     }
     
     override fun onDestroy() {
         super.onDestroy()
-        
-        // 注销广播接收器
         try {
             unregisterReceiver(scanReceiver)
         } catch (e: Exception) {
-            Log.w("WMS_SCAN", "注销广播接收器失败: ${e.message}")
+            Log.w("ScanActivity", "注销广播接收器失败: ${e.message}")
         }
-        
-        Log.d("WMS_SCAN", "❌ 扫码页面销毁")
     }
 } 
