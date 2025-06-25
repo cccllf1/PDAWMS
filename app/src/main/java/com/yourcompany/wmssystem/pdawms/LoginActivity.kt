@@ -29,9 +29,27 @@ class LoginActivity : AppCompatActivity() {
         setupClickListeners()
         loadServerUrl()
         
-        // 如果已登录，直接跳转到主页
+        // 检查登录状态和Token有效性
+        checkLoginStatus()
+    }
+    
+    private fun checkLoginStatus() {
         if (ApiClient.isLoggedIn()) {
-            startMainActivity()
+            // 检查Token是否可能过期
+            if (ApiClient.isTokenExpired(this)) {
+                Toast.makeText(this, "⚠️ 登录已过期，请重新登录", Toast.LENGTH_LONG).show()
+                ApiClient.clearAuth(this)
+            } else {
+                // 检查服务器连接
+                val serverUrl = ApiClient.getServerUrl(this)
+                if (serverUrl.isNotEmpty()) {
+                    Toast.makeText(this, "✅ 自动登录中...", Toast.LENGTH_SHORT).show()
+                    startMainActivity()
+                } else {
+                    Toast.makeText(this, "⚠️ 服务器地址丢失，请重新设置", Toast.LENGTH_LONG).show()
+                    ApiClient.clearAuth(this)
+                }
+            }
         }
     }
     
@@ -75,6 +93,19 @@ class LoginActivity : AppCompatActivity() {
             serverUrl += "/"
         }
         
+        // 验证服务器地址格式
+        val validation = NetworkUtils.validateServerUrl(serverUrl)
+        if (!validation.isValid) {
+            Toast.makeText(this, "❌ ${validation.message}", Toast.LENGTH_LONG).show()
+            return
+        }
+        
+        // 检查网络连接
+        if (!NetworkUtils.isNetworkAvailable(this)) {
+            Toast.makeText(this, "⚠️ 当前无网络连接，请检查网络设置", Toast.LENGTH_LONG).show()
+            return
+        }
+        
         ApiClient.setServerUrl(this, serverUrl)
         Toast.makeText(this, "✅ 服务器地址已设置: $serverUrl", Toast.LENGTH_SHORT).show()
     }
@@ -101,6 +132,20 @@ class LoginActivity : AppCompatActivity() {
         
         if (username.isEmpty() || password.isEmpty()) {
             Toast.makeText(this, "请输入用户名和密码", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        // 检查网络连接
+        if (!NetworkUtils.isNetworkAvailable(this)) {
+            val tips = NetworkUtils.getNetworkTroubleshootingTips(this)
+            Toast.makeText(this, "⚠️ 无网络连接", Toast.LENGTH_SHORT).show()
+            
+            // 显示详细的网络诊断信息
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("🔧 网络诊断")
+                .setMessage(tips)
+                .setPositiveButton("确定", null)
+                .show()
             return
         }
         
@@ -145,12 +190,26 @@ class LoginActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                val errorMsg = when {
-                    e.message?.contains("Unable to resolve host") == true -> "无法连接到服务器，请检查网络和服务器地址"
-                    e.message?.contains("timeout") == true -> "连接超时，请检查网络"
-                    else -> "登录失败: ${e.message}"
-                }
+                
+                // 使用网络工具类分析错误
+                val errorMsg = NetworkUtils.analyzeNetworkError(e)
                 Toast.makeText(this@LoginActivity, errorMsg, Toast.LENGTH_LONG).show()
+                
+                // 如果是网络问题，显示详细诊断信息
+                if (e.message?.contains("Unable to resolve host") == true || 
+                    e.message?.contains("ConnectException") == true ||
+                    e.message?.contains("timeout") == true) {
+                    
+                    val tips = NetworkUtils.getNetworkTroubleshootingTips(this@LoginActivity)
+                    androidx.appcompat.app.AlertDialog.Builder(this@LoginActivity)
+                        .setTitle("🔧 网络问题诊断")
+                        .setMessage(tips)
+                        .setPositiveButton("确定", null)
+                        .setNegativeButton("重新设置服务器") { _, _ ->
+                            editServerUrl.requestFocus()
+                        }
+                        .show()
+                }
             } finally {
                 btnLogin.isEnabled = true
                 btnLogin.text = "登录"

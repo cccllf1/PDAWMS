@@ -63,6 +63,8 @@ class ExternalCodesDialogFragment : DialogFragment() {
         super.onViewCreated(view, savedInstanceState)
         
         initViews(view)
+        editNewCode.requestFocus()
+        ScanFocusManager.setFocusedActivity(requireActivity(), true)
         setupData()
         setupRecyclerView()
         setupClickListeners()

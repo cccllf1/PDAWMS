@@ -1,6 +1,7 @@
 package com.yourcompany.wmssystem.pdawms
 
 import android.app.AlertDialog
+import android.content.BroadcastReceiver
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.os.Bundle
@@ -19,6 +20,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.CoroutineScope
 import java.net.URL
 import com.bumptech.glide.Glide
+import com.yourcompany.wmssystem.pdawms.ScanFocusManager
 
 class LocationActivity : AppCompatActivity() {
     
@@ -50,7 +52,34 @@ class LocationActivity : AppCompatActivity() {
         setupUnifiedNavBar()
         setupRecyclerView()
         setupClickListeners()
+        // === 扫码广播集成 ===
+        ScanFocusManager.register(this, edtSearch) { scanData, _ ->
+            edtSearch.requestFocus()
+            edtSearch.setText(scanData)
+            edtSearch.setSelection(scanData.length)
+            performSearch()
+        }
         loadLocations()
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        ScanFocusManager.setFocusedActivity(this, true)
+    }
+    
+    override fun onPause() {
+        super.onPause()
+        ScanFocusManager.setFocusedActivity(this, false)
+    }
+    
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        ScanFocusManager.setFocusedActivity(this, hasFocus)
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        ScanFocusManager.unregister(this)
     }
     
     private fun initViews() {
@@ -205,6 +234,11 @@ class LocationActivity : AppCompatActivity() {
             .create()
         
         dialog.setOnShowListener {
+            // 使库位编码输入框获得焦点，便于扫码直接填入
+            dialog.findViewById<EditText>(R.id.edtLocationCode)?.requestFocus()
+            // 保持活动为焦点，以便扫码可用
+            ScanFocusManager.setFocusedActivity(this@LocationActivity, true)
+
             val btnPositive = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             btnPositive.setOnClickListener {
                 createLocation(dialogView, dialog)

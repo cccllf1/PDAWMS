@@ -71,7 +71,7 @@
             android:layout_height="wrap_content"
             android:text="添加"
             android:textColor="@android:color/white"
-            android:background="@drawable/nav_button_selector"
+            android:background="@drawable/btn_blue_round"
             android:padding="12dp" />
 
     </LinearLayout>
@@ -134,7 +134,7 @@
             android:layout_height="wrap_content"
             android:text="确定"
             android:textColor="@android:color/white"
-            android:background="@drawable/nav_button_selector"
+            android:background="@drawable/btn_blue_round"
             android:padding="12dp" />
 
     </LinearLayout>

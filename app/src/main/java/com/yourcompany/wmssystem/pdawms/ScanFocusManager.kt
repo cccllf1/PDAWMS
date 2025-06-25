@@ -51,8 +51,9 @@ object ScanFocusManager {
         // 创建扫码接收器
         val scanReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                // 检查当前Activity是否有焦点
-                if (currentFocusedActivity != activityName) {
+                // 如果已有其他Activity持有焦点，则忽略；
+                // 若 currentFocusedActivity 为 null，默认允许当前 Activity 处理扫码
+                if (currentFocusedActivity != null && currentFocusedActivity != activityName) {
                     Log.d(TAG, "🚫 $activityName 无焦点，忽略扫码: ${intent?.action}")
                     return
                 }
@@ -176,18 +177,29 @@ object ScanFocusManager {
     private fun handleScanData(activityName: String, scanData: String, action: String?) {
         val info = registeredActivities[activityName] ?: return
         val activity = info.activityRef.get() ?: return
-        val editText = info.primaryEditText.get() ?: return
         
         activity.runOnUiThread {
             if (info.customHandler != null) {
                 // 使用自定义处理器
                 info.customHandler.invoke(scanData, action)
+                return@runOnUiThread
+            }
+
+            // 优先写入当前获得焦点的 EditText（包含 Dialog 内部的输入框）
+            val currentFocus = activity.currentFocus
+            if (currentFocus is EditText) {
+                currentFocus.setText(scanData)
+                currentFocus.setSelection(scanData.length)
+                Log.d(TAG, "📝 填入当前焦点 EditText: $scanData")
             } else {
-                // 默认处理：填入主输入框
-                editText.requestFocus()
-                editText.setText(scanData)
-                editText.setSelection(scanData.length)
-                Log.d(TAG, "📝 默认处理：$activityName 扫码填入 $scanData")
+                // 否则回退到注册时提供的主输入框
+                val fallbackEdit = info.primaryEditText.get()
+                if (fallbackEdit != null) {
+                    fallbackEdit.requestFocus()
+                    fallbackEdit.setText(scanData)
+                    fallbackEdit.setSelection(scanData.length)
+                    Log.d(TAG, "📝 回退填入主输入框: $scanData")
+                }
             }
         }
     }
